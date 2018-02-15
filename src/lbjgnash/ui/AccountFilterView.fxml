@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.*?>
+<?import java.lang.*?>
+<?import java.util.*?>
+<?import javafx.scene.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<HBox maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="700.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="lbjgnash.ui.AccountFilterViewController">
+   <children>
+      <TabPane prefHeight="200.0" prefWidth="200.0" tabClosingPolicy="UNAVAILABLE" HBox.hgrow="ALWAYS">
+        <tabs>
+          <Tab text="Include">
+               <content>
+                  <VBox prefHeight="200.0" prefWidth="100.0">
+                     <children>
+                        <TabPane prefHeight="200.0" prefWidth="200.0" tabClosingPolicy="UNAVAILABLE" VBox.vgrow="ALWAYS">
+                          <tabs>
+                            <Tab fx:id="includeAccountTypesTab" text="Account Types">
+                                 <content>
+                                    <VBox prefHeight="200.0" prefWidth="100.0">
+                                       <children>
+                                          <Label text="Check account types to include:" />
+                                          <ListView fx:id="includeAccountTypes" prefHeight="200.0" prefWidth="200.0" VBox.vgrow="ALWAYS" />
+                                       </children>
+                                       <padding>
+                                          <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                       </padding>
+                                    </VBox>
+                                 </content>
+                            </Tab>
+                            <Tab fx:id="includeAccountGroupsTab" text="Account Groups">
+                                 <content>
+                                    <VBox prefHeight="200.0" prefWidth="100.0">
+                                       <children>
+                                          <Label text="Check account groups to include:" />
+                                          <ListView fx:id="includeAccountGroups" prefHeight="200.0" prefWidth="200.0" VBox.vgrow="ALWAYS" />
+                                       </children>
+                                       <padding>
+                                          <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                       </padding>
+                                    </VBox>
+                                 </content>
+                            </Tab>
+                              <Tab fx:id="includeAccountNamesTab" text="Accounts">
+                                 <content>
+                                    <VBox prefHeight="200.0" prefWidth="100.0">
+                                       <children>
+                                          <Label text="Check individual accounts to include:" />
+                                          <ListView fx:id="includeAccountNames" prefHeight="200.0" prefWidth="200.0" VBox.vgrow="ALWAYS" />
+                                       </children>
+                                       <padding>
+                                          <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                       </padding>
+                                    </VBox>
+                                 </content>
+                              </Tab>
+                          </tabs>
+                        </TabPane>
+                        <HBox>
+                           <children>
+                              <HBox alignment="TOP_CENTER" HBox.hgrow="ALWAYS">
+                                 <children>
+                                    <Button fx:id="includeCheckAll" mnemonicParsing="false" onAction="#onIncludeCheckAll" text="Check All" />
+                                 </children>
+                                 <padding>
+                                    <Insets bottom="5.0" left="5.0" right="5.0" />
+                                 </padding>
+                              </HBox>
+                              <HBox alignment="TOP_CENTER" HBox.hgrow="ALWAYS">
+                                 <children>
+                                    <Button fx:id="includeClearAll" mnemonicParsing="false" onAction="#onIncludeClearAll" text="Clear All" />
+                                 </children>
+                                 <padding>
+                                    <Insets bottom="5.0" left="5.0" right="5.0" />
+                                 </padding>
+                              </HBox>
+                           </children>
+                        </HBox>
+                        <HBox alignment="CENTER">
+                           <children>
+                              <CheckBox fx:id="includeHiddenAccounts" mnemonicParsing="false" onAction="#onIncludeHiddenAccounts" text="Include Hidden Accounts" />
+                           </children>
+                           <opaqueInsets>
+                              <Insets />
+                           </opaqueInsets>
+                           <padding>
+                              <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                           </padding>
+                        </HBox>
+                     </children>
+                  </VBox>
+               </content>
+          </Tab>
+          <Tab text="Exclude">
+               <content>
+                  <VBox>
+                     <children>
+                        <TabPane prefHeight="200.0" prefWidth="200.0" tabClosingPolicy="UNAVAILABLE" VBox.vgrow="ALWAYS">
+                           <tabs>
+                              <Tab fx:id="excludeAccountTypesTab" text="Account Types">
+                                 <content>
+                                    <VBox prefHeight="200.0" prefWidth="100.0">
+                                       <children>
+                                          <Label text="Check account types to exclude:" />
+                                          <ListView fx:id="excludeAccountTypes" prefHeight="200.0" prefWidth="200.0" VBox.vgrow="ALWAYS" />
+                                       </children>
+                                       <padding>
+                                          <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                       </padding>
+                                    </VBox>
+                                 </content>
+                              </Tab>
+                              <Tab fx:id="excludeAccountGroupsTab" text="Account Groups">
+                                 <content>
+                                    <VBox prefHeight="200.0" prefWidth="100.0">
+                                       <children>
+                                          <Label text="Check account groups to exclude:" />
+                                          <ListView fx:id="excludeAccountGroups" prefHeight="200.0" prefWidth="200.0" VBox.vgrow="ALWAYS" />
+                                       </children>
+                                       <padding>
+                                          <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                       </padding>
+                                    </VBox>
+                                 </content>
+                              </Tab>
+                              <Tab fx:id="excludeAccountNamesTab" text="Accounts">
+                                 <content>
+                                    <VBox prefHeight="200.0" prefWidth="100.0">
+                                       <children>
+                                          <Label text="Check individual accounts to exclude:" />
+                                          <ListView fx:id="excludeAccountNames" prefHeight="200.0" prefWidth="200.0" VBox.vgrow="ALWAYS" />
+                                       </children>
+                                       <padding>
+                                          <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                       </padding>
+                                    </VBox>
+                                 </content>
+                              </Tab>
+                           </tabs>
+                        </TabPane>
+                        <HBox>
+                           <children>
+                              <HBox alignment="TOP_CENTER" HBox.hgrow="ALWAYS">
+                                 <children>
+                                    <Button fx:id="excludeCheckAll" mnemonicParsing="false" onAction="#onExcludeCheckAll" text="Check All" />
+                                 </children>
+                                 <padding>
+                                    <Insets bottom="5.0" left="5.0" right="5.0" />
+                                 </padding>
+                              </HBox>
+                              <HBox alignment="TOP_CENTER" HBox.hgrow="ALWAYS">
+                                 <children>
+                                    <Button fx:id="excludeClearAll" mnemonicParsing="false" onAction="#onExcludeClearAll" text="Clear All" />
+                                 </children>
+                                 <padding>
+                                    <Insets bottom="5.0" left="5.0" right="5.0" />
+                                 </padding>
+                              </HBox>
+                           </children>
+                        </HBox>
+                        <HBox alignment="CENTER">
+                           <children>
+                              <CheckBox fx:id="excludeVisibleAccounts" mnemonicParsing="false" onAction="#onExcludeVisibleAccounts" text="Exclude Visible Accounts" />
+                           </children>
+                           <opaqueInsets>
+                              <Insets />
+                           </opaqueInsets>
+                           <padding>
+                              <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                           </padding>
+                        </HBox>
+                     </children>
+                  </VBox>
+               </content></Tab>
+        </tabs>
+      </TabPane>
+      <HBox alignment="CENTER_RIGHT" prefHeight="100.0" prefWidth="200.0" HBox.hgrow="ALWAYS">
+         <children>
+            <VBox prefHeight="200.0" prefWidth="100.0" HBox.hgrow="ALWAYS">
+               <children>
+                  <Label text="Selected Accounts:" VBox.vgrow="ALWAYS" />
+                  <ListView fx:id="filteredAccounts" VBox.vgrow="ALWAYS" />
+               </children>
+            </VBox>
+         </children>
+         <padding>
+            <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+         </padding>
+      </HBox>
+   </children>
+</HBox>
