@@ -82,7 +82,7 @@ public class ReportDesignerWindow {
             this.controller = (AccountFilterViewController)fxmlLoader.getController();
             if (this.controller != null) {
                 AccountFilter accountFilter = new AccountFilter();
-                this.controller.setupController(this.engine, this.stage, accountFilter);
+                this.controller.setupController(this.engine, accountFilter);
             }
             
             this.stage.setOnCloseRequest((event)-> {

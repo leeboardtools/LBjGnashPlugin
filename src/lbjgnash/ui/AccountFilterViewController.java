@@ -26,7 +26,6 @@ import javafx.beans.property.ReadOnlyStringProperty;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
@@ -34,13 +33,10 @@ import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
-import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
-import javafx.scene.control.SelectionMode;
 import javafx.scene.control.Tab;
 import javafx.scene.control.cell.CheckBoxListCell;
 import javafx.stage.Stage;
-import javafx.util.Callback;
 import jgnash.engine.Account;
 import jgnash.engine.AccountGroup;
 import jgnash.engine.AccountType;
@@ -184,7 +180,7 @@ public class AccountFilterViewController implements Initializable {
         });
     }
     
-    public void setupController(Engine engine, Stage stage, AccountFilter accountFilter) {
+    public void setupController(Engine engine, AccountFilter accountFilter) {
         incrementDisableUpdateAccountFilter();
         try {
             if (this.engine != engine) {
@@ -351,6 +347,10 @@ public class AccountFilterViewController implements Initializable {
         updateAccountSet(excludeAccountNames, accountFilter.getAccountNamesToExclude());
         accountFilter.setExcludeVisibleAccounts(excludeVisibleAccounts.isSelected());
         
+        updateFilteredAccounts();
+    }
+    
+    void updateFilteredAccounts() {
         filteredAccounts.getItems().clear();
         if (engine != null) {
             Set<Account> accounts = accountFilter.filterAccounts(engine);
@@ -370,17 +370,47 @@ public class AccountFilterViewController implements Initializable {
                 accountSet.add(entry.getItem());
             }
         });
-    }   
+    }
+    
+    <T> void updateListView(Set<T> accountSet, ListView<CheckEntry<T>> listView) {
+        listView.getItems().forEach((entry) -> {
+            entry.setSelected(accountSet.contains(entry.getItem()));
+        });
+    }
     
     void updateFromAccountFilter() {
         ++updateAccountFilterDisableCount;
         try {
+            boolean isDisable;
             if (accountFilter == null) {
-
+                isDisable = true;
+                
+                filteredAccounts.getItems().clear();
             }
             else {
+                isDisable = false;
+                updateListView(accountFilter.getAccountTypesToInclude(), includeAccountTypes);
+                updateListView(accountFilter.getAccountGroupsToInclude(), includeAccountGroups);
+                updateListView(accountFilter.getAccountNamesToInclude(), includeAccountNames);
+                includeHiddenAccounts.setSelected(accountFilter.isIncludeHiddenAccounts());
 
+                updateListView(accountFilter.getAccountTypesToExclude(), excludeAccountTypes);
+                updateListView(accountFilter.getAccountGroupsToExclude(), excludeAccountGroups);
+                updateListView(accountFilter.getAccountNamesToExclude(), excludeAccountNames);
+                excludeVisibleAccounts.setSelected(accountFilter.isExcludeVisibleAccounts());
+                
+                updateFilteredAccounts();
             }
+            
+            includeAccountTypes.setDisable(isDisable);
+            includeAccountGroups.setDisable(isDisable);
+            includeAccountNames.setDisable(isDisable);
+            includeHiddenAccounts.setDisable(isDisable);
+
+            excludeAccountTypes.setDisable(isDisable);
+            excludeAccountGroups.setDisable(isDisable);
+            excludeAccountNames.setDisable(isDisable);
+            excludeVisibleAccounts.setDisable(isDisable);
         } finally {
             // Directly decrementing this instead of calling decrementDisableUpdateAccountFilter()
             // so updateAccountFilter() doesn't get called if it reaches 0.

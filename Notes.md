@@ -1,3 +1,7 @@
+# TODO
+- Add ability to filter on Account notes (want to be able to add say 'real-estate' as a note,
+and then exclude accounts with notes that contain 'real-estate'.
+
 # LeeboardTools jGnash Plugin Design Notes
 ## Summary Report
     Overall summary of the accounts. Major items are:
@@ -209,16 +213,6 @@ Some pre-defined ranges:
     ROOT            ROOT
 
 
-How to filter:
-    - List of all accounts.
-        - Accounts to include:
-            - Include all accounts of type x
-            - Include all accounts of group x
-            - Include all hidden accounts
-            - Choose individual accounts.
 
-        - Accounts to exclude:
-            - Exclude all accounts of type x
-            - Exclude all accounts of group x
-            - Exclude specific accounts.
-            - Exclude all hidden/visible accounts.
+
+IMMEDIATE:

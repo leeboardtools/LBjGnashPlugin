@@ -15,11 +15,18 @@
  */
 package lbjgnash.ui;
 
+import com.leeboardtools.util.CompositeObservable;
+import com.leeboardtools.util.SetUtil;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.SortedSet;
 import java.util.TreeSet;
+import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableSet;
+import javafx.collections.SetChangeListener;
 import jgnash.engine.Account;
 import jgnash.engine.AccountGroup;
 import jgnash.engine.AccountType;
@@ -29,47 +36,98 @@ import jgnash.engine.Engine;
  *
  * @author Albert Santos
  */
-public class AccountFilter {
-    private final Set<AccountType> accountTypesToInclude = new HashSet<>();
-    private final Set<AccountGroup> accountGroupsToInclude = new HashSet<>();
-    private final SortedSet<String> accountNamesToInclude = new TreeSet<>();
+public class AccountFilter extends CompositeObservable {
+    private final ObservableSet<AccountType> accountTypesToInclude = FXCollections.observableSet(new HashSet<>());
+    private final ObservableSet<AccountGroup> accountGroupsToInclude = FXCollections.observableSet(new HashSet<>());
+    private final ObservableSet<String> accountNamesToInclude = FXCollections.observableSet(new TreeSet<>());
     private boolean includeHiddenAccounts = true;
     
-    private final Set<AccountType> accountTypesToExclude = new HashSet<>();
-    private final Set<AccountGroup> accountGroupsToExclude = new HashSet<>();
-    private final SortedSet<String> accountNamesToExclude = new TreeSet<>();
+    private final ObservableSet<AccountType> accountTypesToExclude = FXCollections.observableSet(new HashSet<>());
+    private final ObservableSet<AccountGroup> accountGroupsToExclude = FXCollections.observableSet(new HashSet<>());
+    private final ObservableSet<String> accountNamesToExclude = FXCollections.observableSet(new TreeSet<>());
     private boolean excludeVisibleAccounts = false;
     
-    public final Set<AccountType> getAccountTypesToInclude() {
+    public final ObservableSet<AccountType> getAccountTypesToInclude() {
         return accountTypesToInclude;
     }
-    public final Set<AccountGroup> getAccountGroupsToInclude() {
+    public final ObservableSet<AccountGroup> getAccountGroupsToInclude() {
         return accountGroupsToInclude;
     }
-    public final SortedSet<String> getAccountNamesToInclude() {
+    public final ObservableSet<String> getAccountNamesToInclude() {
         return accountNamesToInclude;
     }
     public final boolean isIncludeHiddenAccounts() {
         return includeHiddenAccounts;
     }
     public final void setIncludeHiddenAccounts(boolean isInclude) {
-        includeHiddenAccounts = isInclude;
+        if (isInclude != includeHiddenAccounts) {
+            includeHiddenAccounts = isInclude;
+            markModified();
+        }
     }
     
-    public final Set<AccountType> getAccountTypesToExclude() {
+    public final ObservableSet<AccountType> getAccountTypesToExclude() {
         return accountTypesToExclude;
     }
-    public final Set<AccountGroup> getAccountGroupsToExclude() {
+    public final ObservableSet<AccountGroup> getAccountGroupsToExclude() {
         return accountGroupsToExclude;
     }
-    public final SortedSet<String> getAccountNamesToExclude() {
+    public final ObservableSet<String> getAccountNamesToExclude() {
         return accountNamesToExclude;
     }
     public final boolean isExcludeVisibleAccounts() {
         return excludeVisibleAccounts;
     }
     public final void setExcludeVisibleAccounts(boolean isExclude) {
-        excludeVisibleAccounts = isExclude;
+        if (isExclude != excludeVisibleAccounts) {
+            excludeVisibleAccounts = isExclude;
+            markModified();
+        }
+    }
+    
+    
+    
+    public AccountFilter() {
+        accountTypesToInclude.addListener((SetChangeListener.Change<? extends AccountType> change)-> {
+            markModified();
+        });
+        accountGroupsToInclude.addListener((SetChangeListener.Change<? extends AccountGroup> change)-> {
+            markModified();
+        });
+        accountNamesToInclude.addListener((SetChangeListener.Change<? extends String> change)-> {
+            markModified();
+        });
+        accountTypesToExclude.addListener((SetChangeListener.Change<? extends AccountType> change)-> {
+            markModified();
+        });
+        accountGroupsToExclude.addListener((SetChangeListener.Change<? extends AccountGroup> change)-> {
+            markModified();
+        });
+        accountNamesToExclude.addListener((SetChangeListener.Change<? extends String> change)-> {
+            markModified();
+        });
+    }
+    
+    public void copyFrom(AccountFilter other) {
+        if (this == other) {
+            return;
+        }
+        
+        incrementDisableFireListeners();
+        try {
+            SetUtil.copySet(accountTypesToInclude, other.accountTypesToInclude);
+            SetUtil.copySet(accountGroupsToInclude, other.accountGroupsToInclude);
+            SetUtil.copySet(accountNamesToInclude, other.accountNamesToInclude);
+            setIncludeHiddenAccounts(other.includeHiddenAccounts);
+
+            SetUtil.copySet(accountTypesToExclude, other.accountTypesToExclude);
+            SetUtil.copySet(accountGroupsToExclude, other.accountGroupsToExclude);
+            SetUtil.copySet(accountNamesToExclude, other.accountNamesToExclude);
+            setExcludeVisibleAccounts(other.excludeVisibleAccounts);
+
+        } finally {
+            decrementDisableFireListeners();
+        }
     }
     
     
@@ -129,4 +187,10 @@ public class AccountFilter {
         }
         return isIncludeAccountExceptName(parentAccount);
     }
+    
+    
+    protected void markModified() {
+        fireInvalidationListeners();
+    }
+    
 }

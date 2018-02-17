@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.*?>
+<?import java.lang.*?>
+<?import java.util.*?>
+<?import javafx.scene.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.leeboardtools.time.ui.RangeDateOffsetChooserController">
+   <children>
+      <HBox alignment="CENTER_LEFT" prefHeight="34.0">
+         <children>
+            <RadioButton fx:id="startEndRadio" mnemonicParsing="false" text="The ">
+               <toggleGroup>
+                  <ToggleGroup fx:id="mainToggleGroup" />
+               </toggleGroup></RadioButton>
+            <ChoiceBox fx:id="startEndChoice" />
+            <Label text=" of the " />
+            <ChoiceBox fx:id="startEndPeriodChoice" prefWidth="150.0" />
+         </children>
+      </HBox>
+      <HBox alignment="CENTER_LEFT" prefHeight="34.0">
+         <children>
+            <RadioButton fx:id="offsetRadio" mnemonicParsing="false" toggleGroup="$mainToggleGroup" />
+            <TextField fx:id="daysEdit" prefHeight="25.0" prefWidth="60.0" />
+            <Label text=" days from the " />
+            <ChoiceBox fx:id="offsetStartEndChoice" prefWidth="150.0" />
+            <Label text=" of the " />
+            <ChoiceBox fx:id="offsetPeriodChoice" prefWidth="150.0" />
+         </children>
+      </HBox>
+      <HBox alignment="CENTER_LEFT" prefHeight="34.0">
+         <children>
+            <RadioButton fx:id="dayOfWeekRadio" mnemonicParsing="false" toggleGroup="$mainToggleGroup" />
+            <TextField fx:id="dayOfWeekCountEdit" prefHeight="25.0" prefWidth="60.0">
+               <HBox.margin>
+                  <Insets right="5.0" />
+               </HBox.margin>
+            </TextField>
+            <ChoiceBox fx:id="dayOfWeekChoice" prefWidth="150.0">
+               <opaqueInsets>
+                  <Insets />
+               </opaqueInsets>
+            </ChoiceBox>
+            <Label text=" from the " />
+            <ChoiceBox fx:id="dayOfWeekStartEndChoice" prefHeight="25.0" prefWidth="102.0" />
+            <Label text=" of the " />
+            <ChoiceBox fx:id="dayOfWeekPeriodChoice" prefWidth="150.0" />
+         </children>
+      </HBox>
+   </children>
+   <padding>
+      <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+   </padding>
+</VBox>

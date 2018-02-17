@@ -15,7 +15,9 @@ import jgnash.engine.Engine;
 import jgnash.engine.EngineFactory;
 import jgnash.plugin.FxPlugin;
 import jgnash.uifx.views.main.MainView;
+import lbjgnash.ui.ReportDefinition;
 import lbjgnash.ui.ReportDesignerWindow;
+import lbjgnash.ui.ReportSetupView;
 
 /**
  *
@@ -71,11 +73,16 @@ public class LBJGnashPlugin implements FxPlugin {
     
     private void onSummary() {
     }
+    
+    
+    private ReportDefinition reportDefinition = ReportDefinition.standardNetWorthDefintion();
 
     private void onReportDesigner() {
         final Engine engine = EngineFactory.getEngine(EngineFactory.DEFAULT);
         if (engine != null) {
-            ReportDesignerWindow.showReportDesignerWindow(engine, null);
+            //ReportDesignerWindow.showReportDesignerWindow(engine, null);
+            //ReportDefinition definition = ReportDefinition.standardNetWorthDefintion();
+            ReportSetupView.showAndWait(reportDefinition, engine, MainView.getPrimaryStage());
         }
     }
 }

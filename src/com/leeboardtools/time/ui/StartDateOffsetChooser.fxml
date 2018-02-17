@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.*?>
+<?import java.lang.*?>
+<?import java.util.*?>
+<?import javafx.scene.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.leeboardtools.time.ui.StartDateOffsetChooserController">
+   <children>
+      <HBox alignment="CENTER_LEFT">
+         <children>
+            <RadioButton fx:id="dateRadio" mnemonicParsing="false" text="On ">
+               <toggleGroup>
+                  <ToggleGroup fx:id="mainToggleGroup" />
+               </toggleGroup></RadioButton>
+            <DatePicker fx:id="datePicker" />
+         </children>
+         <padding>
+            <Insets bottom="15.0" />
+         </padding>
+         <VBox.margin>
+            <Insets />
+         </VBox.margin>
+      </HBox>
+      <HBox>
+         <children>
+            <VBox>
+               <children>
+                  <HBox alignment="CENTER_LEFT" prefHeight="34.0">
+                     <children>
+                        <RadioButton fx:id="lastYearRadio" mnemonicParsing="false" text="Last year" toggleGroup="$mainToggleGroup" />
+                     </children>
+                  </HBox>
+                  <HBox alignment="CENTER_LEFT" prefHeight="34.0">
+                     <children>
+                        <RadioButton fx:id="lastQuarterRadio" mnemonicParsing="false" text="Last quarter" toggleGroup="$mainToggleGroup" />
+                     </children>
+                  </HBox>
+                  <HBox alignment="CENTER_LEFT" prefHeight="34.0">
+                     <children>
+                        <RadioButton fx:id="lastMonthRadio" mnemonicParsing="false" text="Last month" toggleGroup="$mainToggleGroup" />
+                     </children>
+                  </HBox>
+                  <HBox alignment="CENTER_LEFT" prefHeight="34.0">
+                     <children>
+                        <RadioButton fx:id="lastWeekRadio" mnemonicParsing="false" text="Last week" toggleGroup="$mainToggleGroup" />
+                     </children>
+                  </HBox>
+               </children>
+               <HBox.margin>
+                  <Insets />
+               </HBox.margin>
+            </VBox>
+            <VBox HBox.hgrow="ALWAYS">
+               <children>
+                  <HBox alignment="CENTER_LEFT" prefHeight="34.0">
+                     <children>
+                        <RadioButton fx:id="previousYearsRadio" mnemonicParsing="false" toggleGroup="$mainToggleGroup" />
+                        <TextField fx:id="previousYearsEdit" prefWidth="60.0" />
+                        <Label text=" years previously" />
+                     </children>
+                  </HBox>
+                  <HBox alignment="CENTER_LEFT" prefHeight="34.0">
+                     <children>
+                        <RadioButton fx:id="previousQuartersRadio" mnemonicParsing="false" toggleGroup="$mainToggleGroup" />
+                        <TextField fx:id="previousQuartersEdit" prefWidth="60.0" />
+                        <Label text=" quarters previously" />
+                     </children>
+                  </HBox>
+                  <HBox alignment="CENTER_LEFT" prefHeight="34.0">
+                     <children>
+                        <RadioButton fx:id="previousMonthRadio" mnemonicParsing="false" toggleGroup="$mainToggleGroup" />
+                        <TextField fx:id="previousMonthsEdit" prefWidth="60.0" />
+                        <Label text=" months previously" />
+                     </children>
+                  </HBox>
+                  <HBox alignment="CENTER_LEFT" prefHeight="34.0">
+                     <children>
+                        <RadioButton fx:id="previousWeeksRadio" mnemonicParsing="false" toggleGroup="$mainToggleGroup" />
+                        <TextField fx:id="previousWeeksEdit" prefWidth="60.0" />
+                        <Label text=" weeks previously" />
+                     </children>
+                  </HBox>
+               </children>
+               <HBox.margin>
+                  <Insets left="10.0" />
+               </HBox.margin>
+            </VBox>
+         </children>
+      </HBox>
+   </children>
+   <padding>
+      <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+   </padding>
+</VBox>

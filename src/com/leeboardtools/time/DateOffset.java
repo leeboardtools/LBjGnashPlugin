@@ -35,6 +35,17 @@ public interface DateOffset {
     
     
     /**
+     * The basic intervals.
+     */
+    public static enum Interval {
+        DAY,
+        WEEK,
+        MONTH,
+        QUARTER,
+        YEAR
+    }
+    
+    /**
      * The standard date offsets supported here.
      */
     public static enum Standard {
@@ -147,6 +158,13 @@ public interface DateOffset {
         DaysOffset(int [] parameters, int baseIndex) {
             this(parameters[baseIndex]);
         }
+        
+        /**
+         * @return The number of days to add to the reference date.
+         */
+        public final int getDayCount() {
+            return count;
+        }
 
         @Override
         public Standard getStandard() {
@@ -177,7 +195,7 @@ public interface DateOffset {
         ;
     }
     
-    static abstract class AbstractStandardDateOffset implements StandardDateOffset {
+    public static abstract class AbstractStandardDateOffset implements StandardDateOffset {
         final int baseOffset;
         final int daysOffset;
         final OffsetReference offsetReference;
@@ -203,6 +221,30 @@ public interface DateOffset {
                 this.subDateOffset = null;
             }
         }
+        
+        
+        /**
+         * @return The number of time periods to offset by, relative to {@link #getOffsetReference() }.
+         */
+        public final int getBaseOffset() {
+            return baseOffset;
+        }
+        
+        /**
+         * @return Which end of the time period the offset is relative to.
+         */
+        public final OffsetReference getOffsetReference() {
+            return offsetReference;
+        }
+        
+        
+        /**
+         * @return The number of days to offset by from the {@link #getOffsetReference() } end of the adjusted time period.
+         */
+        public final int getDaysOffset() {
+            return daysOffset;
+        }
+        
 
         @Override
         public int[] getParameters() {
@@ -223,7 +265,8 @@ public interface DateOffset {
                     date = getFirstDayOffsetDate(refDate).plusDays(daysOffset);
                     break;
                 case LAST_DAY :
-                    date = getLastDayOffsetDate(refDate).minusDays(daysOffset);
+                    date = getLastDayOffsetDate(refDate).minusDays(daysOffset);        
+
                     break;
                 default :
                     throw new IllegalStateException("offsetReference is invalid");
@@ -237,7 +280,8 @@ public interface DateOffset {
         
         
         int [] getMyParameters() {
-            return new int [] { baseOffset, daysOffset, offsetReference.ordinal() };
+            return new int [] { baseOffset, daysOffset, offsetReference.ordinal() };        
+
         }
 
         abstract LocalDate getFirstDayOffsetDate(LocalDate refDate);
@@ -337,6 +381,20 @@ public interface DateOffset {
         
         NthDayOfWeek(int [] parameters, int baseIndex) {
             this(DayOfWeek.of(parameters[baseIndex]), parameters[baseIndex + 1]);
+        }
+        
+        /**
+         * @return The day of the week to be returned.
+         */
+        public final DayOfWeek getDayOfWeek() {
+            return dayOfWeek;
+        }
+        
+        /**
+         * @return The occurrence of the day of the week from the reference date to return.
+         */
+        public final int getOccurrence() {
+            return occurrence;
         }
 
         @Override
@@ -472,6 +530,16 @@ public interface DateOffset {
         }
         YearsOffset(int [] parameters, int baseIndex) {
             super(parameters, baseIndex);
+        }
+        
+        /**
+         * @return The number of years to offset from the year of the
+         * reference date. If offsetReference is {@link OffsetReference#FIRST_DAY} then positive
+         * values advance the year into the future, otherwise positive values advance the
+         * year into the past.
+         */
+        public final int getYearsOffset() {
+            return baseOffset;
         }
 
         @Override
