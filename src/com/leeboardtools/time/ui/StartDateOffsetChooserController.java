@@ -76,7 +76,7 @@ public class StartDateOffsetChooserController implements Initializable {
     
     
     private Stage stage;
-    private DateOffset.StandardDateOffset dateOffset;
+    private DateOffset.Basic dateOffset;
     
     
     /**
@@ -101,92 +101,53 @@ public class StartDateOffsetChooserController implements Initializable {
      * Sets up the controller.
      * @param dateOffset The date offset to be represented by the controls.
      */
-    public void setupController(DateOffset.StandardDateOffset dateOffset, Stage stage) {
+    public void setupController(DateOffset.Basic dateOffset, Stage stage) {
         this.dateOffset = dateOffset;
         this.stage = stage;
         
         this.datePicker.setValue(LocalDate.now());
         
-        switch (dateOffset.getStandard()) {
-        case NULL :
-            setFromNullDaysOffset();
-            break;
-            
-        case DAYS_OFFSET :
-            setFromDaysOffset();
-            break;
-            
-        case NTH_DAY_OF_WEEK :
-            setFromNthDayOfWeekOffset();
-            break;
-            
-        case WEEKS_OFFSET :
-            setFromWeeksOffset();
-            break;
-            
-        case MONTHS_OFFSET :
-            setFromMonthsOffset();
-            break;
-            
-        case QUARTERS_OFFSET :
-            setFromQuartersOffset();
-            break;
-            
-        case YEARS_OFFSET :
-            setFromYearsOffset();
-            break;
+        switch (dateOffset.getInterval()) {
+            case YEAR :
+                setFromInterval(lastYearRadio, previousYearsRadio, previousYearsEdit);
+                break;
+                
+            case QUARTER :
+                setFromInterval(lastQuarterRadio, previousQuartersRadio, previousQuartersEdit);
+                break;
+                
+            case MONTH :
+                setFromInterval(lastMonthRadio, previousMonthRadio, previousMonthsEdit);
+                break;
+                
+            case WEEK :
+                setFromInterval(lastWeekRadio, previousWeeksRadio, previousWeeksEdit);
+                break;
+                
+            case DAY :
+                setFromDay();
+                break;
         }
     }
     
-    void setFromNullDaysOffset() {
+    private void setFromInterval(RadioButton lastRadio, RadioButton previousRadio, TextField previousCountEdit) {
+        int offset = this.dateOffset.getIntervalOffset();
+        if (offset == 0) {
+            lastRadio.setSelected(true);
+        }
+        else {
+            previousRadio.setSelected(true);
+            previousCountEdit.setText(Integer.toString(offset));
+        }
+    }
+    
+    private void setFromDay() {
         dateRadio.setSelected(true);
-        datePicker.setValue(LocalDate.now());
+        
+        LocalDate date = dateOffset.getOffsetDate(LocalDate.now());
+        datePicker.setValue(date);
     }
     
-    void setFromDaysOffset() {
-        DateOffset.DaysOffset daysOffset = (DateOffset.DaysOffset)dateOffset;
-        if (daysOffset != null) {
-            int dayCount = daysOffset.getDayCount();
-            dateRadio.setSelected(true);
-            
-            LocalDate targetDate = LocalDate.now().plusDays(dayCount);
-            datePicker.setValue(targetDate);
-        }
-    }
-    
-    void setFromNthDayOfWeekOffset() {
-        setFromNullDaysOffset();
-    }
-    
-    void setFromWeeksOffset() {
-        setFromBasicStandardOffset(lastWeekRadio, previousWeeksRadio, previousWeeksEdit);
-    }
-    
-    void setFromMonthsOffset() {
-        setFromBasicStandardOffset(lastMonthRadio, previousMonthRadio, previousMonthsEdit);
-    }
-    
-    void setFromQuartersOffset() {
-        setFromBasicStandardOffset(lastQuarterRadio, previousQuartersRadio, previousQuartersEdit);
-    }
-    
-    void setFromYearsOffset() {
-        setFromBasicStandardOffset(lastYearRadio, previousYearsRadio, previousYearsEdit);
-    }
-    
-    void setFromBasicStandardOffset(RadioButton lastRadio, RadioButton previousRadio, TextField previousEdit) {
-        DateOffset.AbstractStandardDateOffset standardOffset = (DateOffset.AbstractStandardDateOffset)dateOffset;
-        if (standardOffset != null) {
-            int baseOffset = standardOffset.getBaseOffset();
-            if (baseOffset > 0) {
-                previousEdit.setText(Integer.toString(baseOffset));
-                previousRadio.setSelected(true);
-            }
-            else {
-                lastRadio.setSelected(true);
-            }
-        }
-    }
     
     
     /**
@@ -232,7 +193,7 @@ public class StartDateOffsetChooserController implements Initializable {
     /**
      * @return Retrieves a {@link DateOffset} representing the current state of the controls.
      */
-    public DateOffset.StandardDateOffset getStartDateOffset() {
+    public DateOffset.Basic getStartDateOffset() {
         if (dateRadio.isSelected()) {
             StringConverter<LocalDate> converter = datePicker.getConverter();
             LocalDate selectedDate = datePicker.getValue();
@@ -245,35 +206,35 @@ public class StartDateOffsetChooserController implements Initializable {
             }
 
             int dayCount = (int)ChronoUnit.DAYS.between(LocalDate.now(), selectedDate);
-            return new DateOffset.DaysOffset(dayCount);
+            return new DateOffset.Basic(DateOffset.Interval.DAY, dayCount, DateOffset.IntervalEnd.FIRST_DAY);
         }
         else if (lastYearRadio.isSelected()) {
-            return new DateOffset.YearsOffset(0, 0, DateOffset.OffsetReference.LAST_DAY, null);
+            return new DateOffset.Basic(DateOffset.Interval.YEAR, 0, DateOffset.IntervalEnd.LAST_DAY);
         }
         else if (previousYearsRadio.isSelected()) {
             int count = getEditCount(previousYearsEdit);
-            return new DateOffset.YearsOffset(count, 0, DateOffset.OffsetReference.LAST_DAY, null);
+            return new DateOffset.Basic(DateOffset.Interval.YEAR, count, DateOffset.IntervalEnd.LAST_DAY);
         }
         else if (lastQuarterRadio.isSelected()) {
-            return new DateOffset.QuartersOffset(0, 0, DateOffset.OffsetReference.LAST_DAY, null);
+            return new DateOffset.Basic(DateOffset.Interval.QUARTER, 0, DateOffset.IntervalEnd.LAST_DAY);
         }
         else if (previousQuartersRadio.isSelected()) {
             int count = getEditCount(previousQuartersEdit);
-            return new DateOffset.QuartersOffset(count, 0, DateOffset.OffsetReference.LAST_DAY, null);
+            return new DateOffset.Basic(DateOffset.Interval.QUARTER, count, DateOffset.IntervalEnd.LAST_DAY);
         }
         else if (lastMonthRadio.isSelected()) {
-            return new DateOffset.MonthsOffset(0, 0, DateOffset.OffsetReference.LAST_DAY, null);
+            return new DateOffset.Basic(DateOffset.Interval.MONTH, 0, DateOffset.IntervalEnd.LAST_DAY);
         }
         else if (previousMonthRadio.isSelected()) {
             int count = getEditCount(previousMonthsEdit);
-            return new DateOffset.MonthsOffset(count, 0, DateOffset.OffsetReference.LAST_DAY, null);
+            return new DateOffset.Basic(DateOffset.Interval.MONTH, count, DateOffset.IntervalEnd.LAST_DAY);
         }
         else if (lastWeekRadio.isSelected()) {
-            return new DateOffset.WeeksOffset(DayOfWeek.SUNDAY, 0, 0, DateOffset.OffsetReference.LAST_DAY);
+            return new DateOffset.Basic(DateOffset.Interval.WEEK, 0, DateOffset.IntervalEnd.LAST_DAY);
         }
         else if (previousWeeksRadio.isSelected()) {
             int count = getEditCount(previousWeeksEdit);
-            return new DateOffset.WeeksOffset(DayOfWeek.SUNDAY, count, 0, DateOffset.OffsetReference.LAST_DAY);
+            return new DateOffset.Basic(DateOffset.Interval.WEEK, count, DateOffset.IntervalEnd.LAST_DAY);
         }
         
         return null;

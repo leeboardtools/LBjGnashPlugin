@@ -125,8 +125,8 @@ public class ReportSetupViewController implements Initializable {
         this.titleEdit.setText(definition.getTitle());
         
         DatePeriods dateSettings = this.definition.getDateSettings();
-        this.startDateOffsetController.setupController((DateOffset.StandardDateOffset)dateSettings.getStartDateOffset(), stage);
-        this.rangeDateOffsetController.setupController((DateOffset.StandardDateOffset)dateSettings.getRangeOffset(), stage);
+        this.startDateOffsetController.setupController((DateOffset.Basic)dateSettings.getStartDateOffset(), stage);
+        this.rangeDateOffsetController.setupController((DateOffset.Basic)dateSettings.getRangeOffset(), stage);
         
         this.workingAccountFilter= new AccountFilter();
         this.workingAccountFilter.copyFrom(definition.getAccountFilter());

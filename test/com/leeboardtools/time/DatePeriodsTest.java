@@ -15,6 +15,7 @@
  */
 package com.leeboardtools.time;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.Month;
 import java.time.Period;
@@ -70,8 +71,8 @@ public class DatePeriodsTest {
                 LocalDate.of(2017, 8, 11));
         
         periodCount = 5;
-        startDateOffset = new DateOffset.YearsOffset(1, 0, DateOffset.OffsetReference.LAST_DAY, null);
-        rangeOffset = new DateOffset.MonthsOffset(0, 0, DateOffset.OffsetReference.LAST_DAY, null);
+        startDateOffset = new DateOffset.Basic(DateOffset.Interval.YEAR, 1, DateOffset.IntervalEnd.LAST_DAY, null, null);
+        rangeOffset = new DateOffset.Basic(DateOffset.Interval.MONTH, 0, DateOffset.IntervalEnd.LAST_DAY, null, null);
         periods = new DatePeriods(period, periodCount, startDateOffset, rangeGenerator, rangeOffset);
         iterator = periods.iterator(LocalDate.of(2018, 2, 11));
         checkIterator(iterator,

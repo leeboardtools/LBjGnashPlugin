@@ -24,6 +24,35 @@ import java.time.Month;
  * @author Albert Santos
  */
 public class DateUtil {
+    
+    private static DayOfWeek defaultFirstDayOfWeek = DayOfWeek.SUNDAY;
+    
+    /**
+     * @return A default value to use for the first day of the week.
+     */
+    public static DayOfWeek getDefaultFirstDayOfWeek() {
+        return defaultFirstDayOfWeek;
+    }
+    
+    /**
+     * Sets the default day of the week.
+     * @param dayOfWeek The day of the week.
+     */
+    public static void setDefaultFirstDayOfWeek(DayOfWeek dayOfWeek) {
+        defaultFirstDayOfWeek = dayOfWeek;
+    }
+    
+    /**
+     * Retrieves a non-<code>null</code> first day of the week.
+     * @param dayOfWeek The potential day of the week, used if not <code>null</code>.
+     * @return dayOfWeek if it is not <code>null</code>, the result of {@link #getDefaultFirstDayOfWeek() }
+     * if it is.
+     */
+    public static DayOfWeek getValidFirstDayOfWeek(DayOfWeek dayOfWeek) {
+        return (dayOfWeek == null) ? defaultFirstDayOfWeek : dayOfWeek;
+    }
+    
+    
     /**
      * Retrieves a {@link LocalDate} that's a specified number of days from the start of the
      * month of a reference date.

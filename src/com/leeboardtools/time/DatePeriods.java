@@ -49,7 +49,9 @@ public class DatePeriods {
     public DatePeriods(Period period, int periodCount, DateOffset startDateOffset, DateRange.Generator rangeGenerator, DateOffset rangeOffset) {
         this.period = period;
         this.periodCount = periodCount;
-        this.startDateOffset = (startDateOffset == null) ? DateOffset.fromStandard(DateOffset.Standard.NULL, null, 0) : startDateOffset;
+        this.startDateOffset = (startDateOffset == null) 
+                ? new DateOffset.Basic(DateOffset.Interval.DAY, 0, DateOffset.IntervalEnd.FIRST_DAY) 
+                : startDateOffset;
         this.rangeGenerator = (rangeGenerator == null) ? new DateRange.CurrentDate(1) : rangeGenerator;
         this.rangeOffset = rangeOffset;
     }

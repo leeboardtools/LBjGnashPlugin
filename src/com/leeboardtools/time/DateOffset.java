@@ -45,366 +45,112 @@ public interface DateOffset {
         YEAR
     }
     
-    /**
-     * The standard date offsets supported here.
-     */
-    public static enum Standard {
-        NULL,
-        DAYS_OFFSET,
-        NTH_DAY_OF_WEEK,
-        WEEKS_OFFSET,
-        MONTHS_OFFSET,
-        QUARTERS_OFFSET,
-        YEARS_OFFSET,
-        ;
-    }
-    
     
     /**
-     * Interface implemented by the standard date offsets.
+     * Determines which end of the interval to work from. Note that for {@link #LAST_DAY},
+     * positive offsets go back in time.
      */
-    public interface StandardDateOffset extends DateOffset {
-        
-        /**
-         * @return The standard this implements.
-         */
-        public Standard getStandard();
-
-        /**
-         * @return The parameters for the standard.
-         */
-        public int [] getParameters();
-    }
-    
-    
-    
-    /**
-     * Creates a date offset for a given standard and its parameters.
-     * @param standard  The standard to create.
-     * @param parameters    The parameters for the standard.
-     * @param baseIndex The index into parameters of the first parameter to use.
-     * @return The standard date offset.
-     */
-    public static StandardDateOffset fromStandard(Standard standard, int [] parameters, int baseIndex) {
-        switch(standard) {
-            case NULL :
-                return new Null();
-                
-            case DAYS_OFFSET :
-                return new DaysOffset(parameters, baseIndex);
-                
-            case NTH_DAY_OF_WEEK :
-                return new NthDayOfWeek(parameters, baseIndex);
-                
-            case WEEKS_OFFSET :
-                return new WeeksOffset(parameters, baseIndex);
-                
-            case MONTHS_OFFSET :
-                return new MonthsOffset(parameters, baseIndex);
-                
-            case QUARTERS_OFFSET :
-                return new QuartersOffset(parameters, baseIndex);
-                
-            case YEARS_OFFSET :
-                return new YearsOffset(parameters, baseIndex);
-        }
-        throw new IllegalArgumentException("standard argument is invalid.");
-    }
-    
-    /**
-     * Helper that applies a date offset if it is not <code>null</code>.
-     * @param dateOffset    The date offset to be applied.
-     * @param refDate   The reference date.
-     * @return The adjusted date.
-     */
-    public static LocalDate applyDateOffset(DateOffset dateOffset, LocalDate refDate) {
-        return (dateOffset == null) ? refDate : dateOffset.getOffsetDate(refDate);
-    }
-    
-    
-    /**
-     * A date offset that simply returns the reference date.
-     */
-    public static class Null implements StandardDateOffset {
-        public Null() {
-        }
-
-        @Override
-        public Standard getStandard() {
-            return Standard.NULL;
-        }
-
-        @Override
-        public LocalDate getOffsetDate(LocalDate refDate) {
-            return refDate;
-        }
-
-        @Override
-        public int[] getParameters() {
-            return new int [0];
-        }
-    }
-    
-
-    /**
-     * A date offset that adds a number of days to the reference date.
-     */
-    public static class DaysOffset implements StandardDateOffset {
-        final int count;
-        
-        public DaysOffset(int dayCount) {
-            this.count = dayCount;
-        }
-        DaysOffset(int [] parameters, int baseIndex) {
-            this(parameters[baseIndex]);
-        }
-        
-        /**
-         * @return The number of days to add to the reference date.
-         */
-        public final int getDayCount() {
-            return count;
-        }
-
-        @Override
-        public Standard getStandard() {
-            return Standard.DAYS_OFFSET;
-        }
-
-        @Override
-        public LocalDate getOffsetDate(LocalDate refDate) {
-            return refDate.plusDays(count);
-        }
-
-        @Override
-        public int[] getParameters() {
-            return new int [] { count };
-        }
-    }
-    
-    
-    /**
-     * Used by date offsets that work with a date range to define whether the days offset
-     * is relative to the first day of the range or the last day of the range.
-     * When it is relative to the last day of the range, positive day values are in the
-     * past relative to the last day, negative day values are in the future.
-     */
-    enum OffsetReference {
+    enum IntervalEnd {
         FIRST_DAY,
         LAST_DAY,
         ;
     }
     
-    public static abstract class AbstractStandardDateOffset implements StandardDateOffset {
-        final int baseOffset;
-        final int daysOffset;
-        final OffsetReference offsetReference;
-        final StandardDateOffset subDateOffset;
-        
-        AbstractStandardDateOffset(int baseOffset, int daysOffset, OffsetReference offsetReference, StandardDateOffset subDateOffset) {
-            this.baseOffset = baseOffset;
-            this.daysOffset = daysOffset;
-            this.offsetReference = offsetReference;
-            this.subDateOffset = subDateOffset;
-        }
-        
-        AbstractStandardDateOffset(int [] parameters, int baseIndex) {
-            this.baseOffset = parameters[baseIndex + 0];
-            this.daysOffset = parameters[baseIndex + 1];
-            this.offsetReference = OffsetReference.values()[parameters[baseIndex + 2]];
-            if (parameters.length > baseIndex + 3) {
-                int standardIndex = parameters[baseIndex + 3];
-                Standard standard = Standard.values()[standardIndex];
-                this.subDateOffset = fromStandard(standard, parameters, baseIndex + 4);
-            }
-            else {
-                this.subDateOffset = null;
-            }
-        }
-        
+    /**
+     * Interface for the date offset to apply after the reference date has been
+     * adjusted to the basic interval.
+     */
+    public interface SubIntervalOffset extends DateOffset {
+        /**
+         * Applies the offset to the reference date in the reverse direction.
+         * @param refDate   The reference date.
+         * @return The offset date.
+         */
+        public LocalDate getReverseOffsetDate(LocalDate refDate);
+    }
+    
+    /**
+     * Sub-interval offset that simply applies a number of days.
+     */
+    public static class DayOffset implements SubIntervalOffset {
+        private final int dayCount;
         
         /**
-         * @return The number of time periods to offset by, relative to {@link #getOffsetReference() }.
+         * Constructor.
+         * @param dayCount The number of days to add.
          */
-        public final int getBaseOffset() {
-            return baseOffset;
+        public DayOffset(int dayCount) {
+            this.dayCount = dayCount;
         }
         
         /**
-         * @return Which end of the time period the offset is relative to.
+         * @return The number of days to add.
          */
-        public final OffsetReference getOffsetReference() {
-            return offsetReference;
-        }
-        
-        
-        /**
-         * @return The number of days to offset by from the {@link #getOffsetReference() } end of the adjusted time period.
-         */
-        public final int getDaysOffset() {
-            return daysOffset;
-        }
-        
-
-        @Override
-        public int[] getParameters() {
-            int [] myParameters = getMyParameters();
-            if (this.subDateOffset == null) {
-                return myParameters;
-            }
-            
-            int [] subParameters = this.subDateOffset.getParameters();
-            return ArrayUtil.join(myParameters, new int [] { this.subDateOffset.getStandard().ordinal() }, subParameters);
+        public final int getDayCount() {
+            return dayCount;
         }
 
         @Override
         public LocalDate getOffsetDate(LocalDate refDate) {
-            LocalDate date;
-            switch (offsetReference) {
-                case FIRST_DAY :
-                    date = getFirstDayOffsetDate(refDate).plusDays(daysOffset);
-                    break;
-                case LAST_DAY :
-                    date = getLastDayOffsetDate(refDate).minusDays(daysOffset);        
-
-                    break;
-                default :
-                    throw new IllegalStateException("offsetReference is invalid");
-            }
-            
-            if (subDateOffset != null) {
-                date = subDateOffset.getOffsetDate(date);
-            }
-            return date;
+            return refDate.plusDays(dayCount);
         }
         
-        
-        int [] getMyParameters() {
-            return new int [] { baseOffset, daysOffset, offsetReference.ordinal() };        
-
+        @Override
+        public LocalDate getReverseOffsetDate(LocalDate refDate) {
+            return refDate.minusDays(dayCount);
         }
-
-        abstract LocalDate getFirstDayOffsetDate(LocalDate refDate);
-        abstract LocalDate getLastDayOffsetDate(LocalDate refDate);
     }
     
-    
     /**
-     * A date offset that uses a week as the range, with a  {@link DayOfWeek} argument
-     * defining the first day of the week.
-     */
-    public static class WeeksOffset extends AbstractStandardDateOffset {
-        final DayOfWeek startOfWeek;
-        
-        /**
-         * Constructor.
-         * @param startOfWeek   The day of the week defining the first day of the week.
-         * @param weeksOffset   The number of weeks to offset the final week. If offsetReference
-         * is {@link OffsetReference#FIRST_DAY} then positive values move the week into the
-         * future, otherwise positive values move the week into the past.
-         * @param daysOffset    The day offset to add to the offset reference date calculated
-         * for the weeksOffset, the sign direction matches the sign direction of weeksOffset.
-         * @param offsetReference The offset reference, if {@link OffsetReference#FIRST_DAY}
-         * then a 0 daysOffset will return a date whose day of the week is startOfWeek.
-         * If {@link OffsetReference#LAST_DAY} the a 0 daysOffset will return a date whose
-         * day of the week is the day of the week before startOfWeek.
-         */
-        public WeeksOffset(DayOfWeek startOfWeek, int weeksOffset, int daysOffset, OffsetReference offsetReference) {
-            super(weeksOffset, daysOffset, offsetReference, null);
-            this.startOfWeek = startOfWeek;
-        }
-        WeeksOffset(int [] parameters, int baseIndex) {
-            super(parameters, baseIndex + 1);
-            this.startOfWeek = DayOfWeek.of(parameters[0]);
-        }
-
-        @Override
-        int[] getMyParameters() {
-            int [] superParameters = super.getMyParameters();
-            return ArrayUtil.join(new int [] { startOfWeek.getValue() }, superParameters);
-        }
-
-        @Override
-        LocalDate getFirstDayOffsetDate(LocalDate refDate) {
-            return DateUtil.getClosestDayOfWeekOnOrBefore(refDate, startOfWeek).plusWeeks(baseOffset);
-        }
-
-        @Override
-        LocalDate getLastDayOffsetDate(LocalDate refDate) {
-            return DateUtil.getClosestDayOfWeekOnOrAfter(refDate, startOfWeek).minusDays(1).minusWeeks(baseOffset);
-        }
-
-        @Override
-        public Standard getStandard() {
-            return Standard.WEEKS_OFFSET;
-        }
-
-    }
-    
-    
-    /**
-     * A date offset that returns a particular occurrence of a day of the week relative
-     * to the reference date. The occurrences are inclusive.
-     * <p>
+     * Sub-interval offset that selects the nth occurrence of a particular day of week
+     * on or after the reference date.
      * Some examples (LocalDate.of(2018, 2, 12) is a Monday)
      * <pre><code>
      *      // This returns the second Monday from the reference date, inclusive of the reference date.
-     *      DateOffset offset = new DateOffset.NthDayOfWeek(DayOfWeek.MONDAY, 2);
+     *      DateOffset offset = new DateOffset.NthDayOfWeekOffset(DayOfWeek.MONDAY, 2);
      *      LocalDate date = offset.getOffsetDate(LocalDate.of(2018, 2, 12));
      *      assertEquals(LocalDate.of(2018, 2, 19), date);
      * 
      *      // This returns the 3rd Sunday from the reference date.
-     *      offset = new DateOffset.NthDayOfWeek(DayOfWeek.SUNDAY, 3);
+     *      offset = new DateOffset.NthDayOfWeekOffset(DayOfWeek.SUNDAY, 3);
      *      date = offset.getOffsetDate(LocalDate.of(2018, 2, 12));
      *      assertEquals(LocalDate.of(2018, 3, 4), date);
      * 
      *      // This returns the 1st Tuesday from the reference date.
-     *      offset = new DateOffset.NthDayOfWeek(DayOfWeek.TUESDAY, 1);
+     *      offset = new DateOffset.NthDayOfWeekOffset(DayOfWeek.TUESDAY, 1);
      *      date = offset.getOffsetDate(LocalDate.of(2018, 2, 12));
      *      assertEquals(LocalDate.of(2018, 2, 13), date);
      * </code></pre>
      */
-    public static class NthDayOfWeek implements StandardDateOffset {
-        final DayOfWeek dayOfWeek;
-        final int occurrence;
+    public static class NthDayOfWeekOffset implements SubIntervalOffset {
+        private final DayOfWeek dayOfWeek;
+        private final int occurrence;
         
         /**
          * Constructor.
-         * @param dayOfWeek The day of the week of interest.
-         * @param occurrence The nth occurrence of the of the day of the week from
-         * the reference date to return. This should normally be a positive integer.
+         * @param dayOfWeek The day of week of interest.
+         * @param occurrence The number of occurrences, this should normally be a non-zero
+         * integer.
          */
-        public NthDayOfWeek(DayOfWeek dayOfWeek, int occurrence) {
+        public NthDayOfWeekOffset(DayOfWeek dayOfWeek, int occurrence) {
             this.dayOfWeek = dayOfWeek;
             this.occurrence = occurrence;
         }
         
-        NthDayOfWeek(int [] parameters, int baseIndex) {
-            this(DayOfWeek.of(parameters[baseIndex]), parameters[baseIndex + 1]);
-        }
-        
         /**
-         * @return The day of the week to be returned.
+         * @return The day of week of the offset date returned by {@link #getOffsetDate(java.time.LocalDate) }.
          */
         public final DayOfWeek getDayOfWeek() {
             return dayOfWeek;
         }
         
         /**
-         * @return The occurrence of the day of the week from the reference date to return.
+         * @return The number of occurrences of the day of the week from the reference date, 
+         * if the reference date falls on the day of the week an occurrence of 1 will
+         * return the reference date.
          */
         public final int getOccurrence() {
             return occurrence;
-        }
-
-        @Override
-        public Standard getStandard() {
-            return Standard.NTH_DAY_OF_WEEK;
-        }
-
-        @Override
-        public int[] getParameters() {
-            return new int [] { dayOfWeek.getValue(), occurrence };
         }
 
         @Override
@@ -412,153 +158,191 @@ public interface DateOffset {
             LocalDate date = DateUtil.getClosestDayOfWeekOnOrAfter(refDate, dayOfWeek);
             return date.plusWeeks(occurrence - 1);
         }
+
+        @Override
+        public LocalDate getReverseOffsetDate(LocalDate refDate) {
+            LocalDate date = DateUtil.getClosestDayOfWeekOnOrBefore(refDate, dayOfWeek);
+            return date.minusWeeks(occurrence - 1);
+        }
     }
-    
+
     
     /**
-     * A date offset that uses calendar months as the basic unit.
+     * A {@link DateOffset} implementation that provides an offset over an {@link Interval}
+     * and then an optional offset within the interval using a {@link SubIntervalOffset}.
      */
-    public static class MonthsOffset extends AbstractStandardDateOffset {
+    public static class Basic implements DateOffset {
+        private final Interval interval;
+        private final int intervalOffset;
+        private final IntervalEnd intervalEnd;
+        private final SubIntervalOffset subIntervalOffset;
+        private final DayOfWeek startOfWeek;
         
         /**
          * Constructor.
-         * @param monthsOffset  The number of months to offset from the month of the
-         * reference date. If offsetReference is {@link OffsetReference#FIRST_DAY} then positive
-         * values advance the month into the future, otherwise positive values advance the
-         * month into the past.
-         * @param daysOffset    The number of days to add to the offset date calculated for
-         * the months offset. The sign direction matches that of monthsOffset.
-         * @param offsetReference   The offset reference, if {@link OffsetReference#FIRST_DAY}
-         * then a 0 daysOffset will return a date that is the first of the month, otherwise a 
-         * 0 daysOffset will return a date that is the last day of the month.
-         * @param subDateOffset An optional date offset to apply to the calculated offset date.
+         * @param interval  The offset interval.
+         * @param intervalOffset    The number of intervals to offset by.
+         * @param intervalEnd   The reference point of the interval by which to offset.
+         *  Note that {@link IntervalEnd#LAST_DAY} reverses the offset directions, that is,
+         *  positive offsets are in the past.
+         * @param subIntervalOffset The optional sub-interval to add to the interval offset date.
+         * If <code>null</code> no sub-interval offset is applied.
+         * @param startOfWeek For use when interval is {@link Interval#WEEK} to specify the
+         * day that starts the week. If <code>null</code> then the day of the week returned
+         * by {@link DateUtil#getDefaultFirstDayOfWeek() } will be used.
          */
-        public MonthsOffset(int monthsOffset, int daysOffset, OffsetReference offsetReference, StandardDateOffset subDateOffset) {
-            super(monthsOffset, daysOffset, offsetReference, subDateOffset);
-        }
-        MonthsOffset(int [] parameters, int baseIndex) {
-            super(parameters, baseIndex);
-        }
-
-        @Override
-        LocalDate getFirstDayOffsetDate(LocalDate refDate) {
-            return DateUtil.getStartOfMonth(refDate).plusMonths(baseOffset);
+        public Basic(Interval interval, int intervalOffset, IntervalEnd intervalEnd, 
+                SubIntervalOffset subIntervalOffset, DayOfWeek startOfWeek) {
+            this.interval = interval;
+            this.intervalOffset = intervalOffset;
+            this.intervalEnd = intervalEnd;
+            this.subIntervalOffset = subIntervalOffset;
+            this.startOfWeek = startOfWeek;
         }
 
-        @Override
-        LocalDate getLastDayOffsetDate(LocalDate refDate) {
-            // We need to adjust by the base offset before jumping to the end so we don't
-            // lose dates due to differing last day of the month.
-            return DateUtil.getEndOfMonth(refDate.minusMonths(baseOffset));
-        }
-
-        @Override
-        public Standard getStandard() {
-            return Standard.MONTHS_OFFSET;
-        }
-
-    }
-    
-    
-    /**
-     * A date offset that uses calendar quarters as the basic unit.
-     */
-    public static class QuartersOffset extends AbstractStandardDateOffset {
-        
         
         /**
          * Constructor.
-         * @param quartersOffset  The number of quarters to offset from the quarter of the
-         * reference date. If offsetReference is {@link OffsetReference#FIRST_DAY} then positive
-         * values advance the quarter into the future, otherwise positive values advance the
-         * quarter into the past.
-         * @param daysOffset    The number of days to add to the offset date calculated for
-         * the quarters offset. The sign direction matches that of quartersOffset.
-         * @param offsetReference   The offset reference, if {@link OffsetReference#FIRST_DAY}
-         * then a 0 daysOffset will return a date that is the first of the quarter, otherwise a 
-         * 0 daysOffset will return a date that is the last day of the quarter.
-         * @param subDateOffset An optional date offset to apply to the calculated offset date.
+         * @param interval  The offset interval.
+         * @param intervalOffset    The number of intervals to offset by.
+         * @param intervalEnd   The reference point of the interval by which to offset.
+         *  Note that {@link IntervalEnd#LAST_DAY} reverses the offset directions, that is,
+         *  positive offsets are in the past.
          */
-        public QuartersOffset(int quartersOffset, int daysOffset, OffsetReference offsetReference, StandardDateOffset subDateOffset) {
-            super(quartersOffset, daysOffset, offsetReference, subDateOffset);
-        }
-        QuartersOffset(int [] parameters, int baseIndex) {
-            super(parameters, baseIndex);
+        public Basic(Interval interval, int intervalOffset, IntervalEnd intervalEnd) {
+            this(interval, intervalOffset, intervalEnd, null, null);
         }
 
-        @Override
-        LocalDate getFirstDayOffsetDate(LocalDate refDate) {
-            return DateUtil.getStartOfQuarter(refDate).plusMonths(baseOffset * 3);
-        }
-
-        @Override
-        LocalDate getLastDayOffsetDate(LocalDate refDate) {
-            // We need to adjust by the base offset before jumping to the end so we don't
-            // lose dates due to differing last day of the month.
-            return DateUtil.getEndOfQuarter(refDate.minusMonths(baseOffset * 3));
-        }
-
-        @Override
-        public Standard getStandard() {
-            return Standard.QUARTERS_OFFSET;
-        }
-
-    }
-    
-    
-    /**
-     * A date offset that uses calendar years as the basic unit.
-     */
-    public static class YearsOffset extends AbstractStandardDateOffset {
-        
         
         /**
          * Constructor.
-         * @param yearsOffset  The number of years to offset from the year of the
-         * reference date. If offsetReference is {@link OffsetReference#FIRST_DAY} then positive
-         * values advance the year into the future, otherwise positive values advance the
-         * year into the past.
-         * @param daysOffset    The number of days to add to the offset date calculated for
-         * the years offset. The sign direction matches that of yearsOffset.
-         * @param offsetReference   The offset reference, if {@link OffsetReference#FIRST_DAY}
-         * then a 0 daysOffset will return a date that is the first of the calendar year, otherwise a 
-         * 0 daysOffset will return a date that is the last day of the calendar year.
-         * @param subDateOffset An optional date offset to apply to the calculated offset date.
+         * @param interval  The offset interval.
+         * @param intervalOffset    The number of intervals to offset by.
+         * @param intervalEnd   The reference point of the interval by which to offset.
+         *  Note that {@link IntervalEnd#LAST_DAY} reverses the offset directions, that is,
+         *  positive offsets are in the past.
+         * @param startOfWeek For use when interval is {@link Interval#WEEK} to specify the
+         * day that starts the week. If <code>null</code> then the day of the week returned
+         * by {@link DateUtil#getDefaultFirstDayOfWeek() } will be used.
          */
-        public YearsOffset(int yearsOffset, int daysOffset, OffsetReference offsetReference, StandardDateOffset subDateOffset) {
-            super(yearsOffset, daysOffset, offsetReference, subDateOffset);
-        }
-        YearsOffset(int [] parameters, int baseIndex) {
-            super(parameters, baseIndex);
+        public Basic(Interval interval, int intervalOffset, IntervalEnd intervalEnd, DayOfWeek startOfWeek) {
+            this(interval, intervalOffset, intervalEnd, null, startOfWeek);
         }
         
         /**
-         * @return The number of years to offset from the year of the
-         * reference date. If offsetReference is {@link OffsetReference#FIRST_DAY} then positive
-         * values advance the year into the future, otherwise positive values advance the
-         * year into the past.
+         * @return The offset interval.
          */
-        public final int getYearsOffset() {
-            return baseOffset;
+        public final Interval getInterval() {
+            return interval;
         }
-
+        
+        /**
+         * @return The number of intervals to offset by. The direction in time is determined
+         * by {@link #getIntervalEnd() }.
+         */
+        public final int getIntervalOffset() {
+            return intervalOffset;
+        }
+        
+        /**
+         * @return The reference point of the interval by which to offset.
+         *  Note that {@link IntervalEnd#LAST_DAY} reverses the offset directions, that is,
+         *  positive offsets are in the past.
+         */
+        public final IntervalEnd getIntervalEnd() {
+            return intervalEnd;
+        }
+        
+        /**
+         * @return The optional sub-interval to add to the interval offset date, <code>null</code>
+         * if no sub-interval is to be applied.
+         */
+        public final SubIntervalOffset getSubIntervalOffset() {
+            return subIntervalOffset;
+        }
+        
+        /**
+         * @return Used when the interval is {@link Interval#WEEK} to specify the
+         * day that starts the week. If <code>null</code> then the day of the week returned
+         * by {@link DateUtil#getDefaultFirstDayOfWeek() } will be used.
+         */
+        public final DayOfWeek getStartOfWeek() {
+            return startOfWeek;
+        }
+        
         @Override
-        LocalDate getFirstDayOffsetDate(LocalDate refDate) {
-            return DateUtil.getStartOfYear(refDate).plusYears(baseOffset);
-        }
+        public LocalDate getOffsetDate(LocalDate refDate) {
+            LocalDate offsetDate = refDate;
+            switch (intervalEnd) {
+                case FIRST_DAY :
+                    switch (interval) {
+                        case YEAR :
+                            offsetDate = DateUtil.getStartOfYear(refDate).plusYears(intervalOffset);
+                            break;
+                            
+                        case QUARTER :
+                            offsetDate = DateUtil.getStartOfQuarter(refDate);
+                            offsetDate = DateUtil.plusQuarters(offsetDate, intervalOffset);
+                            break;
+                            
+                        case MONTH :
+                            offsetDate = DateUtil.getStartOfMonth(refDate).plusMonths(intervalOffset);
+                            break;
+                            
+                        case WEEK :
+                            offsetDate = DateUtil.getClosestDayOfWeekOnOrBefore(refDate, DateUtil.getValidFirstDayOfWeek(startOfWeek))
+                                    .plusWeeks(intervalOffset);
+                            break;
+                            
+                        case DAY :
+                            offsetDate = refDate.plusDays(intervalOffset);
+                            break;
+                    }
+                    if (subIntervalOffset != null) {
+                        offsetDate = subIntervalOffset.getOffsetDate(offsetDate);
+                    }
+                    break;
+                    
+                case LAST_DAY :
+                    // We have to offset by the intervals before getting the end of the interval
+                    // to make sure we get the actual end of the interval.
+                    switch (interval) {
+                        case YEAR :
+                            offsetDate = refDate.minusYears(intervalOffset);
+                            offsetDate = DateUtil.getEndOfYear(offsetDate);
+                            break;
+                            
+                        case QUARTER :
+                            offsetDate = DateUtil.minusQuarters(refDate, intervalOffset);
+                            offsetDate = DateUtil.getEndOfQuarter(offsetDate);
+                            break;
 
-        @Override
-        LocalDate getLastDayOffsetDate(LocalDate refDate) {
-            // We need to adjust by the base offset before jumping to the end so we don't
-            // lose dates due to differing last day of the month.
-            return DateUtil.getEndOfYear(refDate.minusYears(baseOffset));
+                        case MONTH :
+                            offsetDate = refDate.minusMonths(intervalOffset);
+                            offsetDate = DateUtil.getEndOfMonth(offsetDate);
+                            break;
+                            
+                        case WEEK :
+                            offsetDate = DateUtil.getClosestDayOfWeekOnOrAfter(refDate, DateUtil.getValidFirstDayOfWeek(startOfWeek))
+                                    .minusWeeks(intervalOffset);
+                            break;
+                            
+                        case DAY :
+                            offsetDate = refDate.minusDays(intervalOffset);
+                            break;
+                    }
+                    if (subIntervalOffset != null) {
+                        offsetDate = subIntervalOffset.getReverseOffsetDate(offsetDate);
+                    }
+                    break;
+            }
+            
+            
+            return offsetDate;
         }
-
-        @Override
-        public Standard getStandard() {
-            return Standard.YEARS_OFFSET;
-        }
-
+    
     }
+    
+    
     
 }

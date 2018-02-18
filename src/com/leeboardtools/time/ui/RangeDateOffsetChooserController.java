@@ -44,17 +44,17 @@ public class RangeDateOffsetChooserController implements Initializable {
     @FXML
     private RadioButton startEndRadio;
     @FXML
-    private ChoiceBox<DateOffset.OffsetReference> startEndChoice;
+    private ChoiceBox<DateOffset.IntervalEnd> startEndChoice;
     @FXML
-    private ChoiceBox<DateOffset.Standard> startEndPeriodChoice;
+    private ChoiceBox<DateOffset.Interval> startEndPeriodChoice;
     @FXML
     private RadioButton offsetRadio;
     @FXML
     private TextField daysEdit;
     @FXML
-    private ChoiceBox<DateOffset.OffsetReference> offsetStartEndChoice;
+    private ChoiceBox<DateOffset.IntervalEnd> offsetStartEndChoice;
     @FXML
-    private ChoiceBox<DateOffset.Standard> offsetPeriodChoice;
+    private ChoiceBox<DateOffset.Interval> offsetPeriodChoice;
     @FXML
     private RadioButton dayOfWeekRadio;
     @FXML
@@ -62,16 +62,16 @@ public class RangeDateOffsetChooserController implements Initializable {
     @FXML
     private ChoiceBox<DayOfWeek> dayOfWeekChoice;
     @FXML
-    private ChoiceBox<DateOffset.OffsetReference> dayOfWeekStartEndChoice;
+    private ChoiceBox<DateOffset.IntervalEnd> dayOfWeekStartEndChoice;
     @FXML
-    private ChoiceBox<DateOffset.Standard> dayOfWeekPeriodChoice;
+    private ChoiceBox<DateOffset.Interval> dayOfWeekPeriodChoice;
     
     private String firstDayText;
     private String lastDayText;
     
-    private StringConverter<DateOffset.OffsetReference> startEndConverter = new StringConverter<DateOffset.OffsetReference>() {
+    private StringConverter<DateOffset.IntervalEnd> startEndConverter = new StringConverter<DateOffset.IntervalEnd>() {
         @Override
-        public String toString(DateOffset.OffsetReference object) {
+        public String toString(DateOffset.IntervalEnd object) {
             switch(object) {
                 case FIRST_DAY :
                     return firstDayText;
@@ -82,7 +82,7 @@ public class RangeDateOffsetChooserController implements Initializable {
         }
 
         @Override
-        public DateOffset.OffsetReference fromString(String string) {
+        public DateOffset.IntervalEnd fromString(String string) {
             throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
         }
     };
@@ -93,24 +93,24 @@ public class RangeDateOffsetChooserController implements Initializable {
     private String monthsText;
     private String weeksText;
     
-    private StringConverter<DateOffset.Standard> periodConverter = new StringConverter<DateOffset.Standard>() {
+    private StringConverter<DateOffset.Interval> periodConverter = new StringConverter<DateOffset.Interval>() {
         @Override
-        public String toString(DateOffset.Standard object) {
+        public String toString(DateOffset.Interval object) {
             switch(object) {
-                case YEARS_OFFSET :
+                case YEAR :
                     return yearsText;
-                case QUARTERS_OFFSET :
+                case QUARTER :
                     return quartersText;
-                case MONTHS_OFFSET :
+                case MONTH :
                     return monthsText;
-                case WEEKS_OFFSET :
+                case WEEK :
                     return weeksText;
             }
             return null;
         }
 
         @Override
-        public DateOffset.Standard fromString(String string) {
+        public DateOffset.Interval fromString(String string) {
             throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
         }
     };
@@ -129,7 +129,7 @@ public class RangeDateOffsetChooserController implements Initializable {
     @FXML
     private ToggleGroup mainToggleGroup;
 
-    private DateOffset.StandardDateOffset dateOffset;
+    private DateOffset.Basic dateOffset;
     private Stage stage;
     
     /**
@@ -147,30 +147,74 @@ public class RangeDateOffsetChooserController implements Initializable {
         
         setupStartEndChoice(startEndChoice);
         setupPeriodChoice(startEndPeriodChoice);
+        startEndChoice.focusedProperty().addListener((property, oldValue, newValue) -> {
+            if (newValue) {
+                startEndRadio.setSelected(true);
+            }
+        });
+        startEndPeriodChoice.focusedProperty().addListener((property, oldValue, newValue) -> {
+            if (newValue) {
+                startEndRadio.setSelected(true);
+            }
+        });
         
         setupStartEndChoice(offsetStartEndChoice);
         setupPeriodChoice(offsetPeriodChoice);
+        offsetStartEndChoice.focusedProperty().addListener((property, oldValue, newValue) -> {
+            if (newValue) {
+                offsetRadio.setSelected(true);
+            }
+        });
+        offsetPeriodChoice.focusedProperty().addListener((property, oldValue, newValue) -> {
+            if (newValue) {
+                offsetRadio.setSelected(true);
+            }
+        });
+        daysEdit.setOnKeyPressed((event) -> {
+            offsetRadio.setSelected(true);
+        });
+        daysEdit.setText("0");
         
         setupStartEndChoice(dayOfWeekStartEndChoice);
         setupPeriodChoice(dayOfWeekPeriodChoice);
-        
         setupDayOfWeekChoice(dayOfWeekChoice);
+        dayOfWeekStartEndChoice.focusedProperty().addListener((property, oldValue, newValue) -> {
+            if (newValue) {
+                dayOfWeekRadio.setSelected(true);
+            }
+        });
+        dayOfWeekPeriodChoice.focusedProperty().addListener((property, oldValue, newValue) -> {
+            if (newValue) {
+                dayOfWeekRadio.setSelected(true);
+            }
+        });
+        dayOfWeekChoice.focusedProperty().addListener((property, oldValue, newValue) -> {
+            if (newValue) {
+                dayOfWeekRadio.setSelected(true);
+            }
+        });
+        dayOfWeekCountEdit.setOnKeyTyped((event)-> {
+            dayOfWeekRadio.setSelected(true);
+        });
+        dayOfWeekCountEdit.setText("1");
     }    
     
-    void setupStartEndChoice(ChoiceBox<DateOffset.OffsetReference> choiceBox) {
+    void setupStartEndChoice(ChoiceBox<DateOffset.IntervalEnd> choiceBox) {
         choiceBox.getItems().addAll(
-                DateOffset.OffsetReference.FIRST_DAY, 
-                DateOffset.OffsetReference.LAST_DAY);
+                DateOffset.IntervalEnd.FIRST_DAY, 
+                DateOffset.IntervalEnd.LAST_DAY);
         choiceBox.setConverter(startEndConverter);
+        choiceBox.setValue(DateOffset.IntervalEnd.FIRST_DAY);
     }
     
-    void setupPeriodChoice(ChoiceBox<DateOffset.Standard> choiceBox) {
+    void setupPeriodChoice(ChoiceBox<DateOffset.Interval> choiceBox) {
         choiceBox.getItems().addAll(
-                DateOffset.Standard.YEARS_OFFSET, 
-                DateOffset.Standard.QUARTERS_OFFSET,
-                DateOffset.Standard.MONTHS_OFFSET,
-                DateOffset.Standard.WEEKS_OFFSET);
+                DateOffset.Interval.YEAR, 
+                DateOffset.Interval.QUARTER,
+                DateOffset.Interval.MONTH,
+                DateOffset.Interval.WEEK);
         choiceBox.setConverter(periodConverter);
+        choiceBox.setValue(DateOffset.Interval.YEAR);
     }
     
     void setupDayOfWeekChoice(ChoiceBox<DayOfWeek> choiceBox) {
@@ -183,67 +227,56 @@ public class RangeDateOffsetChooserController implements Initializable {
                 DayOfWeek.FRIDAY,
                 DayOfWeek.SATURDAY);
         choiceBox.setConverter(dayOfWeekConverter);
+        choiceBox.setValue(DayOfWeek.MONDAY);
     }
     
-    public void setupController(DateOffset.StandardDateOffset dateOffset, Stage stage) {
+    public void setupController(DateOffset.Basic dateOffset, Stage stage) {
         if (dateOffset == null) {
-            dateOffset = new DateOffset.Null();
+            dateOffset = new DateOffset.Basic(DateOffset.Interval.MONTH, 0, DateOffset.IntervalEnd.LAST_DAY);
         }
         
         this.dateOffset = dateOffset;
         this.stage = stage;
         
-        switch (dateOffset.getStandard()) {
-        case NULL :
-        case DAYS_OFFSET :
-            setFromNullDaysOffset();
-            break;
-            
-        case NTH_DAY_OF_WEEK :
-            setFromNthDayOfWeekOffset();
-            break;
-            
-        case WEEKS_OFFSET :
-        case MONTHS_OFFSET :
-        case QUARTERS_OFFSET :
-        case YEARS_OFFSET :
-            setFromOffset(dateOffset.getStandard());
-            break;
+        DateOffset.SubIntervalOffset subIntervalOffset = dateOffset.getSubIntervalOffset();
+        if (subIntervalOffset instanceof DateOffset.NthDayOfWeekOffset) {
+            setupFromNthDayOfWeek();
+        }
+        else if (subIntervalOffset instanceof DateOffset.DayOffset) {
+            setupFromDayOffset();
+        }
+        else {
+            setupFromInterval();
         }
     }
     
-    private void setFromNullDaysOffset() {
+    private void setupFromNthDayOfWeek() {
+        DateOffset.NthDayOfWeekOffset subIntervalOffset = (DateOffset.NthDayOfWeekOffset)dateOffset.getSubIntervalOffset();
+        dayOfWeekRadio.setSelected(true);
+        dayOfWeekCountEdit.setText(Integer.toString(subIntervalOffset.getOccurrence()));
+        dayOfWeekChoice.setValue(subIntervalOffset.getDayOfWeek());
+    }
+    
+    private void setupFromDayOffset() {
+        DateOffset.DayOffset subIntervalOffset = (DateOffset.DayOffset)dateOffset.getSubIntervalOffset();
+        int dayCount = subIntervalOffset.getDayCount();
+        if (dayCount != 0) {
+            offsetRadio.setSelected(true);
+            daysEdit.setText(Integer.toString(dayCount));
+            offsetStartEndChoice.setValue(dateOffset.getIntervalEnd());
+            offsetPeriodChoice.setValue(dateOffset.getInterval());
+        }
+        else {
+            setupFromInterval();
+        }
+    }
+    
+    private void setupFromInterval() {
         startEndRadio.setSelected(true);
-        startEndChoice.setValue(DateOffset.OffsetReference.LAST_DAY);
-        startEndPeriodChoice.setValue(DateOffset.Standard.YEARS_OFFSET);
+        startEndChoice.setValue(dateOffset.getIntervalEnd());
+        startEndPeriodChoice.setValue(dateOffset.getInterval());
     }
 
-    private void setFromNthDayOfWeekOffset() {
-        DateOffset.NthDayOfWeek nthDayOfWeek = (DateOffset.NthDayOfWeek)this.dateOffset;
-        if (nthDayOfWeek != null) {
-            dayOfWeekRadio.setSelected(true);
-            dayOfWeekCountEdit.setText(Integer.toString(nthDayOfWeek.getOccurrence()));
-            dayOfWeekChoice.setValue(nthDayOfWeek.getDayOfWeek());
-        }
-    }
-
-    private void setFromOffset(DateOffset.Standard standard) {
-        DateOffset.AbstractStandardDateOffset standardDateOffset = (DateOffset.AbstractStandardDateOffset)this.dateOffset;
-        if (standardDateOffset != null) {
-            int dayCount = standardDateOffset.getDaysOffset();
-            if (dayCount == 0) {
-                startEndRadio.setSelected(true);
-                startEndChoice.setValue(standardDateOffset.getOffsetReference());
-                startEndPeriodChoice.setValue(standard);
-            }
-            else {
-                offsetRadio.setSelected(true);
-                daysEdit.setText(Integer.toString(dayCount));
-                offsetStartEndChoice.setValue(standardDateOffset.getOffsetReference());
-                offsetPeriodChoice.setValue(standard);
-            }
-        }
-    }
     
     public boolean validate() {
         if (startEndRadio.isSelected()) {
@@ -257,7 +290,25 @@ public class RangeDateOffsetChooserController implements Initializable {
         return true;
     }
     
-    public DateOffset.StandardDateOffset getRangeDateOffset() {
+    public DateOffset.Basic getRangeDateOffset() {
+        if (startEndRadio.isSelected()) {
+            DateOffset.IntervalEnd intervalEnd = startEndChoice.getValue();
+            DateOffset.Interval interval = startEndPeriodChoice.getValue();
+            return new DateOffset.Basic(interval, 0, intervalEnd);
+        }
+        else if (offsetRadio.isSelected()) {
+            int count = Integer.parseInt(daysEdit.getText());
+            DateOffset.IntervalEnd intervalEnd = offsetStartEndChoice.getValue();
+            DateOffset.Interval interval = offsetPeriodChoice.getValue();
+            return new DateOffset.Basic(interval, 0, intervalEnd, new DateOffset.DayOffset(count), null);
+        }
+        else if (dayOfWeekRadio.isSelected()) {
+            int count = Integer.parseInt(dayOfWeekCountEdit.getText());
+            DayOfWeek dayOfWeek = dayOfWeekChoice.getValue();
+            DateOffset.IntervalEnd intervalEnd = dayOfWeekStartEndChoice.getValue();
+            DateOffset.Interval interval = dayOfWeekPeriodChoice.getValue();
+            return new DateOffset.Basic(interval, 0, intervalEnd, new DateOffset.NthDayOfWeekOffset(dayOfWeek, count), null);
+        }
         return null;
     }
 
