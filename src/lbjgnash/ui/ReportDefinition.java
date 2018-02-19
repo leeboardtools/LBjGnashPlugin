@@ -56,14 +56,14 @@ public class ReportDefinition extends CompositeObservable {
     }
     
     
-    private final ObjectProperty<DateOffset> rangeDateOffset = new SimpleObjectProperty<>(this, "rangeDateOffset", null);
-    public final ObjectProperty<DateOffset> rangeDateOffsetProperty() {
+    private final ObjectProperty<DateOffset.Basic> rangeDateOffset = new SimpleObjectProperty<>(this, "rangeDateOffset", null);
+    public final ObjectProperty<DateOffset.Basic> rangeDateOffsetProperty() {
         return rangeDateOffset;
     }
-    public final DateOffset getRangeDateOffset() {
+    public final DateOffset.Basic getRangeDateOffset() {
         return rangeDateOffset.get();
     }
-    public final void setRangeDateOffset(DateOffset value) {
+    public final void setRangeDateOffset(DateOffset.Basic value) {
         rangeDateOffset.set(value);
     }
     

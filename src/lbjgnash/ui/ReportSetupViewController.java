@@ -15,6 +15,7 @@
  */
 package lbjgnash.ui;
 
+import com.leeboardtools.time.DateOffset;
 import com.leeboardtools.time.PeriodicDateGenerator;
 import com.leeboardtools.time.ui.PeriodicDateGeneratorViewController;
 import com.leeboardtools.time.ui.RangeChooserController;
@@ -106,11 +107,7 @@ public class ReportSetupViewController implements Initializable {
             netWorthText = ResourceSource.getString("Report.Title.NetWorth");
             incomeExpenseText = ResourceSource.getString("Report.Title.IncomeExpense");
             portfolioText = ResourceSource.getString("Report.Title.Portfolio");
-            reportStyleChoice.getItems().addAll(
-                    ReportDefinition.Standard.NET_WORTH,
-                    ReportDefinition.Standard.INCOME_EXPENSE,
-                    ReportDefinition.Standard.PORTFOLIO
-            );
+            reportStyleChoice.getItems().addAll(ReportDefinition.Standard.values());
             reportStyleChoice.setConverter(reportStyleConverter);
             
             
@@ -153,6 +150,9 @@ public class ReportSetupViewController implements Initializable {
         
         PeriodicDateGenerator dateGenerator = this.definition.getDateGenerator();
         this.periodicDateController.setupController(dateGenerator, stage);
+        
+        DateOffset.Basic rangeOffset = this.definition.getRangeDateOffset();
+        this.rangeController.setupController(rangeOffset, stage);
 
         this.workingAccountFilter= new AccountFilter();
         this.workingAccountFilter.copyFrom(definition.getAccountFilter());
@@ -165,11 +165,17 @@ public class ReportSetupViewController implements Initializable {
             if (!this.periodicDateController.validate()) {
                 return;
             }
+            if (!this.rangeController.validate()) {
+                return;
+            }
 
             PeriodicDateGenerator dateGenerator = this.periodicDateController.getPeriodicDateGenerator();
             if (!dateGenerator.equals(this.definition.getDateGenerator())) {
                 this.definition.setDateGenerator(dateGenerator);
             }
+            
+            DateOffset.Basic rangeOffset = this.rangeController.getRangeDateOffset();
+            this.definition.setRangeDateOffset(rangeOffset);
 
             this.definition.setTitle(this.titleEdit.getText());
             
