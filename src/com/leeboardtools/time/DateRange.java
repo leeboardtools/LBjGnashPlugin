@@ -120,6 +120,14 @@ public class DateRange {
         return this;
     }
     
+
+    /**
+     * Interface for objects that generate a date range given a reference date.
+     */
+    public interface Generator {
+        public DateRange generateRange(LocalDate refDate);
+    }
+    
     
     /**
      * Standard range generator types that can be created by {@link #fromStandard(com.leeboardtools.time.DateRange.Standard, int[]) }.
@@ -140,13 +148,6 @@ public class DateRange {
         PRECEEDING_YEARS,
         PRECEEDING_MONTHS,
         PRECEEDING_QUARTERS,
-    }
-    
-    /**
-     * Interface for objects that generate a date range given a reference date.
-     */
-    public interface Generator {
-        public DateRange generateRange(LocalDate refDate);
     }
     
     /**

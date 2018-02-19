@@ -16,8 +16,10 @@
 package com.leeboardtools.time;
 
 import com.leeboardtools.util.ArrayUtil;
+import com.leeboardtools.util.ResourceSource;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import javafx.util.StringConverter;
 
 /**
  * Interface for defining a date offset, the offset is applied by the interface
@@ -35,26 +37,193 @@ public interface DateOffset {
     
     
     /**
-     * The basic intervals.
+     * Date offset that returns the reference date.
      */
-    public static enum Interval {
-        DAY,
-        WEEK,
-        MONTH,
-        QUARTER,
-        YEAR
-    }
+    public static final DateOffset.Basic SAME_DAY = new Basic(Interval.DAY, 0, IntervalRelation.FIRST_DAY);
+    
+    /**
+     * Date offset that returns the date that is one year prior to the reference date.
+     */
+    public static final DateOffset.Basic TWELVE_MONTHS_PRIOR = new Basic(Interval.YEAR, -1, IntervalRelation.CURRENT_DAY);
+    
+    /**
+     * Date offset that returns the date that is one month prior to the reference date.
+     */
+    public static final DateOffset.Basic ONE_MONTH_PRIOR = new Basic(Interval.MONTH, -1, IntervalRelation.CURRENT_DAY);
+    
+    /**
+     * Date offset that returns the first day of the reference date's year.
+     */
+    public static final DateOffset.Basic START_OF_YEAR = new Basic(Interval.YEAR, 0, IntervalRelation.FIRST_DAY);
+
+    /**
+     * Date offset that returns the last day of the reference date's year.
+     */
+    public static final DateOffset.Basic END_OF_YEAR = new Basic(Interval.YEAR, 0, IntervalRelation.LAST_DAY);
+
+    /**
+     * Date offset that returns the first day of the reference date's month.
+     */
+    public static final DateOffset.Basic START_OF_MONTH = new Basic(Interval.MONTH, 0, IntervalRelation.FIRST_DAY);
+
+    /**
+     * Date offset that returns the last day of the reference date's month.
+     */
+    public static final DateOffset.Basic END_OF_MONTH = new Basic(Interval.MONTH, 0, IntervalRelation.LAST_DAY);
+
+    /**
+     * Date offset that returns the last day of the year before the reference date's year.
+     */
+    public static final DateOffset.Basic END_OF_LAST_YEAR = new Basic(Interval.YEAR, 1, IntervalRelation.LAST_DAY);
+
+    /**
+     * Date offset that returns the first day of the year before the reference date's year.
+     */
+    public static final DateOffset.Basic START_OF_LAST_YEAR = new Basic(Interval.YEAR, -1, IntervalRelation.FIRST_DAY);
+
+    /**
+     * Date offset that returns the last day of the month before the reference date's month.
+     */
+    public static final DateOffset.Basic END_OF_LAST_MONTH = new Basic(Interval.MONTH, 1, IntervalRelation.LAST_DAY);
+
+    /**
+     * Date offset that returns the first day of the month before the reference date's month.
+     */
+    public static final DateOffset.Basic START_OF_LAST_MONTH = new Basic(Interval.MONTH, -1, IntervalRelation.FIRST_DAY);
     
     
     /**
-     * Determines which end of the interval to work from. Note that for {@link #LAST_DAY},
+     * The basic intervals.
+     */
+    public static enum Interval {
+        DAY("LBTime.DateOffset.Interval.Day"),
+        WEEK("LBTime.DateOffset.Interval.Week"),
+        MONTH("LBTime.DateOffset.Interval.Month"),
+        QUARTER("LBTime.DateOffset.Interval.Quarter"),
+        YEAR("LBTime.DateOffset.Interval.Year");
+        
+        private final String stringResourceId;
+        private Interval(String stringResourceId) {
+            this.stringResourceId = stringResourceId;
+        }
+        public final String getStringResourceId() {
+            return this.stringResourceId;
+        }
+        
+        private static final Interval [] valuesNoDayArray = { WEEK, MONTH, QUARTER, YEAR };
+        public static final Interval []  valuesNoDay() {
+            return valuesNoDayArray;
+        }
+    }
+    
+    /**
+     * String converter for {@link Interval}.
+     */
+    public static class IntervalStringConverter extends StringConverter<Interval> {
+        private static String [] text;
+        
+        private static void loadText() {
+            if (text == null) {
+                text = new String [Interval.values().length];
+                for (int i = 0; i < text.length; ++i) {
+                    text[i] = ResourceSource.getString(Interval.values()[i].getStringResourceId());
+                }
+            }
+        }
+        
+        @Override
+        public String toString(DateOffset.Interval object) {
+            loadText();
+            if (object != null) {
+                return text[object.ordinal()];
+            }
+            return null;
+        }
+
+        @Override
+        public DateOffset.Interval fromString(String string) {
+            loadText();
+            for (int i =0; i < text.length; ++i) {
+                if (text[i].equals(string)) {
+                    return Interval.values()[i];
+                }
+            }
+            return null;
+        }
+    }
+    public static final IntervalStringConverter INTERVAL_STRING_CONVERTER = new IntervalStringConverter();
+    
+    
+    /**
+     * Determines which where in the interval to work from. Note that for {@link #LAST_DAY},
      * positive offsets go back in time.
      */
-    enum IntervalEnd {
-        FIRST_DAY,
-        LAST_DAY,
+    enum IntervalRelation {
+        /**
+         * The interval offset is applied to the first day of the interval.
+         */
+        FIRST_DAY("LBTime.DateOffset.IntervalRelation.FirstDay"),
+        
+        /**
+         * The interval offset is applied directly to the reference date.
+         */
+        CURRENT_DAY("LBTime.DateOffset.IntervalRelation.CurrentDay"),
+        
+        /**
+         * The interval offset is applied to the last day of the interval.
+         */
+        LAST_DAY("LBTime.DateOffset.IntervalRelation.LastDay"),
         ;
+        
+        private String stringResourceId;
+        private IntervalRelation(String stringResourceId) {
+            this.stringResourceId = stringResourceId;
+        }
+        public final String getStringResourceId() {
+            return this.stringResourceId;
+        }
+        
+        
+        private static IntervalRelation [] valuesNoCurrent = { FIRST_DAY, LAST_DAY };
+        public static IntervalRelation [] valuesNoCurrentDay() {
+            return valuesNoCurrent;
+        }
     }
+    
+    public static class IntervalRelationStringConverter extends StringConverter<IntervalRelation> {
+        private static String [] text;
+        
+        private static void loadText() {
+            if (text == null) {
+                text = new String [IntervalRelation.values().length];
+                for (int i = 0; i < text.length; ++i) {
+                    text[i] = ResourceSource.getString(IntervalRelation.values()[i].getStringResourceId());
+                }
+            }
+        }
+
+        @Override
+        public String toString(IntervalRelation object) {
+            loadText();
+            if (object != null) {
+                return text[object.ordinal()];
+            }
+            return null;
+        }
+
+        @Override
+        public IntervalRelation fromString(String string) {
+            loadText();
+            for (int i =0; i < text.length; ++i) {
+                if (text[i].equals(string)) {
+                    return IntervalRelation.values()[i];
+                }
+            }
+            return null;
+        }
+    }
+    public static final IntervalRelationStringConverter INTERVAL_RELATION_STRING_CONVERTER = new IntervalRelationStringConverter();
+    
     
     /**
      * Interface for the date offset to apply after the reference date has been
@@ -174,7 +343,7 @@ public interface DateOffset {
     public static class Basic implements DateOffset {
         private final Interval interval;
         private final int intervalOffset;
-        private final IntervalEnd intervalEnd;
+        private final IntervalRelation intervalRelation;
         private final SubIntervalOffset subIntervalOffset;
         private final DayOfWeek startOfWeek;
         
@@ -182,8 +351,8 @@ public interface DateOffset {
          * Constructor.
          * @param interval  The offset interval.
          * @param intervalOffset    The number of intervals to offset by.
-         * @param intervalEnd   The reference point of the interval by which to offset.
-         *  Note that {@link IntervalEnd#LAST_DAY} reverses the offset directions, that is,
+         * @param intervalRelation   The reference point of the interval by which to offset.
+         *  Note that {@link IntervalRelation#LAST_DAY} reverses the offset directions, that is,
          *  positive offsets are in the past.
          * @param subIntervalOffset The optional sub-interval to add to the interval offset date.
          * If <code>null</code> no sub-interval offset is applied.
@@ -191,11 +360,11 @@ public interface DateOffset {
          * day that starts the week. If <code>null</code> then the day of the week returned
          * by {@link DateUtil#getDefaultFirstDayOfWeek() } will be used.
          */
-        public Basic(Interval interval, int intervalOffset, IntervalEnd intervalEnd, 
+        public Basic(Interval interval, int intervalOffset, IntervalRelation intervalRelation, 
                 SubIntervalOffset subIntervalOffset, DayOfWeek startOfWeek) {
             this.interval = interval;
             this.intervalOffset = intervalOffset;
-            this.intervalEnd = intervalEnd;
+            this.intervalRelation = intervalRelation;
             this.subIntervalOffset = subIntervalOffset;
             this.startOfWeek = startOfWeek;
         }
@@ -205,12 +374,12 @@ public interface DateOffset {
          * Constructor.
          * @param interval  The offset interval.
          * @param intervalOffset    The number of intervals to offset by.
-         * @param intervalEnd   The reference point of the interval by which to offset.
-         *  Note that {@link IntervalEnd#LAST_DAY} reverses the offset directions, that is,
+         * @param intervalRelation   The reference point of the interval by which to offset.
+         *  Note that {@link IntervalRelation#LAST_DAY} reverses the offset directions, that is,
          *  positive offsets are in the past.
          */
-        public Basic(Interval interval, int intervalOffset, IntervalEnd intervalEnd) {
-            this(interval, intervalOffset, intervalEnd, null, null);
+        public Basic(Interval interval, int intervalOffset, IntervalRelation intervalRelation) {
+            this(interval, intervalOffset, intervalRelation, null, null);
         }
 
         
@@ -218,15 +387,15 @@ public interface DateOffset {
          * Constructor.
          * @param interval  The offset interval.
          * @param intervalOffset    The number of intervals to offset by.
-         * @param intervalEnd   The reference point of the interval by which to offset.
-         *  Note that {@link IntervalEnd#LAST_DAY} reverses the offset directions, that is,
+         * @param intervalRelation   The reference point of the interval by which to offset.
+         *  Note that {@link IntervalRelation#LAST_DAY} reverses the offset directions, that is,
          *  positive offsets are in the past.
          * @param startOfWeek For use when interval is {@link Interval#WEEK} to specify the
          * day that starts the week. If <code>null</code> then the day of the week returned
          * by {@link DateUtil#getDefaultFirstDayOfWeek() } will be used.
          */
-        public Basic(Interval interval, int intervalOffset, IntervalEnd intervalEnd, DayOfWeek startOfWeek) {
-            this(interval, intervalOffset, intervalEnd, null, startOfWeek);
+        public Basic(Interval interval, int intervalOffset, IntervalRelation intervalRelation, DayOfWeek startOfWeek) {
+            this(interval, intervalOffset, intervalRelation, null, startOfWeek);
         }
         
         /**
@@ -238,7 +407,7 @@ public interface DateOffset {
         
         /**
          * @return The number of intervals to offset by. The direction in time is determined
-         * by {@link #getIntervalEnd() }.
+         * by {@link #getIntervalRelation() }.
          */
         public final int getIntervalOffset() {
             return intervalOffset;
@@ -246,11 +415,11 @@ public interface DateOffset {
         
         /**
          * @return The reference point of the interval by which to offset.
-         *  Note that {@link IntervalEnd#LAST_DAY} reverses the offset directions, that is,
+         *  Note that {@link IntervalRelation#LAST_DAY} reverses the offset directions, that is,
          *  positive offsets are in the past.
          */
-        public final IntervalEnd getIntervalEnd() {
-            return intervalEnd;
+        public final IntervalRelation getIntervalRelation() {
+            return intervalRelation;
         }
         
         /**
@@ -270,10 +439,22 @@ public interface DateOffset {
             return startOfWeek;
         }
         
+        
+        /**
+         * Retrieves a new {@link Basic} date offset that is identical to this date offset except
+         * that an amount has been added to the interval offset.
+         * @param delta The amount to add to the interval offset.
+         * @return The new date offset.
+         */
+        public Basic plusIntervalOffset(int delta) {
+            return new Basic(interval, intervalOffset + delta, intervalRelation, subIntervalOffset, startOfWeek);
+        }
+        
+        
         @Override
         public LocalDate getOffsetDate(LocalDate refDate) {
             LocalDate offsetDate = refDate;
-            switch (intervalEnd) {
+            switch (intervalRelation) {
                 case FIRST_DAY :
                     switch (interval) {
                         case YEAR :
@@ -292,6 +473,33 @@ public interface DateOffset {
                         case WEEK :
                             offsetDate = DateUtil.getClosestDayOfWeekOnOrBefore(refDate, DateUtil.getValidFirstDayOfWeek(startOfWeek))
                                     .plusWeeks(intervalOffset);
+                            break;
+                            
+                        case DAY :
+                            offsetDate = refDate.plusDays(intervalOffset);
+                            break;
+                    }
+                    if (subIntervalOffset != null) {
+                        offsetDate = subIntervalOffset.getOffsetDate(offsetDate);
+                    }
+                    break;
+                    
+                case CURRENT_DAY :
+                    switch (interval) {
+                        case YEAR :
+                            offsetDate = refDate.plusYears(intervalOffset);
+                            break;
+                            
+                        case QUARTER :
+                            offsetDate = DateUtil.plusQuarters(refDate, intervalOffset);
+                            break;
+                            
+                        case MONTH :
+                            offsetDate = refDate.plusMonths(intervalOffset);
+                            break;
+                            
+                        case WEEK :
+                            offsetDate = refDate.plusWeeks(intervalOffset);
                             break;
                             
                         case DAY :

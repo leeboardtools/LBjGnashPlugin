@@ -206,35 +206,35 @@ public class StartDateOffsetChooserController implements Initializable {
             }
 
             int dayCount = (int)ChronoUnit.DAYS.between(LocalDate.now(), selectedDate);
-            return new DateOffset.Basic(DateOffset.Interval.DAY, dayCount, DateOffset.IntervalEnd.FIRST_DAY);
+            return new DateOffset.Basic(DateOffset.Interval.DAY, dayCount, DateOffset.IntervalRelation.FIRST_DAY);
         }
         else if (lastYearRadio.isSelected()) {
-            return new DateOffset.Basic(DateOffset.Interval.YEAR, 0, DateOffset.IntervalEnd.LAST_DAY);
+            return new DateOffset.Basic(DateOffset.Interval.YEAR, 0, DateOffset.IntervalRelation.LAST_DAY);
         }
         else if (previousYearsRadio.isSelected()) {
             int count = getEditCount(previousYearsEdit);
-            return new DateOffset.Basic(DateOffset.Interval.YEAR, count, DateOffset.IntervalEnd.LAST_DAY);
+            return new DateOffset.Basic(DateOffset.Interval.YEAR, count, DateOffset.IntervalRelation.LAST_DAY);
         }
         else if (lastQuarterRadio.isSelected()) {
-            return new DateOffset.Basic(DateOffset.Interval.QUARTER, 0, DateOffset.IntervalEnd.LAST_DAY);
+            return new DateOffset.Basic(DateOffset.Interval.QUARTER, 0, DateOffset.IntervalRelation.LAST_DAY);
         }
         else if (previousQuartersRadio.isSelected()) {
             int count = getEditCount(previousQuartersEdit);
-            return new DateOffset.Basic(DateOffset.Interval.QUARTER, count, DateOffset.IntervalEnd.LAST_DAY);
+            return new DateOffset.Basic(DateOffset.Interval.QUARTER, count, DateOffset.IntervalRelation.LAST_DAY);
         }
         else if (lastMonthRadio.isSelected()) {
-            return new DateOffset.Basic(DateOffset.Interval.MONTH, 0, DateOffset.IntervalEnd.LAST_DAY);
+            return new DateOffset.Basic(DateOffset.Interval.MONTH, 0, DateOffset.IntervalRelation.LAST_DAY);
         }
         else if (previousMonthRadio.isSelected()) {
             int count = getEditCount(previousMonthsEdit);
-            return new DateOffset.Basic(DateOffset.Interval.MONTH, count, DateOffset.IntervalEnd.LAST_DAY);
+            return new DateOffset.Basic(DateOffset.Interval.MONTH, count, DateOffset.IntervalRelation.LAST_DAY);
         }
         else if (lastWeekRadio.isSelected()) {
-            return new DateOffset.Basic(DateOffset.Interval.WEEK, 0, DateOffset.IntervalEnd.LAST_DAY);
+            return new DateOffset.Basic(DateOffset.Interval.WEEK, 0, DateOffset.IntervalRelation.LAST_DAY);
         }
         else if (previousWeeksRadio.isSelected()) {
             int count = getEditCount(previousWeeksEdit);
-            return new DateOffset.Basic(DateOffset.Interval.WEEK, count, DateOffset.IntervalEnd.LAST_DAY);
+            return new DateOffset.Basic(DateOffset.Interval.WEEK, count, DateOffset.IntervalRelation.LAST_DAY);
         }
         
         return null;

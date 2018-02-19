@@ -82,7 +82,7 @@ public class LBJGnashPlugin implements FxPlugin {
         if (engine != null) {
             //ReportDesignerWindow.showReportDesignerWindow(engine, null);
             //ReportDefinition definition = ReportDefinition.standardNetWorthDefintion();
-            ReportSetupView.showAndWait(reportDefinition, engine, MainView.getPrimaryStage());
+            ReportSetupView.showAndWait("Test Report", reportDefinition, engine, MainView.getPrimaryStage());
         }
     }
 }

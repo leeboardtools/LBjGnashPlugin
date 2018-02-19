@@ -15,9 +15,13 @@
  */
 package com.leeboardtools.time.ui;
 
+import com.leeboardtools.time.DateOffset;
 import java.net.URL;
 import java.util.ResourceBundle;
+import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
+import javafx.scene.control.ChoiceBox;
+import javafx.scene.control.TextField;
 
 /**
  * FXML Controller class
@@ -25,6 +29,11 @@ import javafx.fxml.Initializable;
  * @author Albert Santos
  */
 public class RangeChooserController implements Initializable {
+
+    @FXML
+    private TextField countEdit;
+    @FXML
+    private ChoiceBox<DateOffset.Interval> periodChoice;
 
     /**
      * Initializes the controller class.

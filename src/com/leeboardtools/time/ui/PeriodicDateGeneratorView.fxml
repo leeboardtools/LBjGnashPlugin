@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.*?>
+<?import java.lang.*?>
+<?import java.util.*?>
+<?import javafx.scene.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.leeboardtools.time.ui.PeriodicDateGeneratorViewController">
+   <padding>
+      <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+   </padding>
+   <children>
+      <HBox alignment="CENTER_LEFT">
+         <children>
+            <Label text="Start:" />
+         </children>
+         <VBox.margin>
+            <Insets left="5.0" right="5.0" top="5.0" />
+         </VBox.margin>
+      </HBox>
+      <HBox alignment="CENTER_LEFT">
+         <children>
+            <RadioButton fx:id="specificDateRadio" mnemonicParsing="false" text="on ">
+               <toggleGroup>
+                  <ToggleGroup fx:id="startToggleGroup" />
+               </toggleGroup></RadioButton>
+            <DatePicker fx:id="specificDatePicker" />
+         </children>
+         <VBox.margin>
+            <Insets bottom="5.0" left="15.0" right="5.0" top="5.0" />
+         </VBox.margin>
+      </HBox>
+      <HBox alignment="CENTER_LEFT">
+         <children>
+            <RadioButton fx:id="currentIntervalRadio" mnemonicParsing="false" text="on the first day of the current " toggleGroup="$startToggleGroup" />
+            <ChoiceBox fx:id="currentIntervalChoice" prefWidth="150.0" />
+         </children>
+         <VBox.margin>
+            <Insets bottom="5.0" left="15.0" right="5.0" top="5.0" />
+         </VBox.margin>
+      </HBox>
+      <HBox alignment="CENTER_LEFT">
+         <children>
+            <RadioButton fx:id="previousRadio" mnemonicParsing="false" text="on the " toggleGroup="$startToggleGroup" />
+            <ChoiceBox fx:id="previousRelationChoice" prefWidth="150.0" />
+            <Label text=" of the previous " />
+            <ChoiceBox fx:id="previousIntervalChoice" prefWidth="150.0" />
+         </children>
+         <VBox.margin>
+            <Insets bottom="5.0" left="15.0" right="5.0" top="5.0" />
+         </VBox.margin>
+      </HBox>
+      <HBox alignment="CENTER_LEFT">
+         <children>
+            <RadioButton fx:id="agoRadio" mnemonicParsing="false" toggleGroup="$startToggleGroup" />
+            <TextField fx:id="agoCountEdit" prefWidth="60.0" />
+            <Label text=" " />
+            <ChoiceBox fx:id="agoIntervalChoice" prefWidth="150.0" />
+            <Label text=" ago" />
+         </children>
+         <VBox.margin>
+            <Insets bottom="5.0" left="15.0" right="5.0" top="5.0" />
+         </VBox.margin>
+      </HBox>
+      <HBox>
+         <children>
+            <Label text="Repeat:" />
+         </children>
+         <VBox.margin>
+            <Insets left="5.0" right="5.0" top="5.0" />
+         </VBox.margin>
+      </HBox>
+      <HBox alignment="CENTER_LEFT">
+         <children>
+            <RadioButton fx:id="repeatCountRadio" mnemonicParsing="false">
+               <toggleGroup>
+                  <ToggleGroup fx:id="repeatToggleGroup" />
+               </toggleGroup></RadioButton>
+            <TextField fx:id="repeatCountEdit" prefWidth="60.0" />
+            <Label text=" times" />
+         </children>
+         <VBox.margin>
+            <Insets bottom="5.0" left="15.0" right="5.0" top="5.0" />
+         </VBox.margin>
+      </HBox>
+      <HBox alignment="CENTER_LEFT">
+         <children>
+            <RadioButton fx:id="repeatUntilRadio" mnemonicParsing="false" text="until " toggleGroup="$repeatToggleGroup" />
+            <DatePicker fx:id="repeatUntilDatePicker" />
+         </children>
+         <VBox.margin>
+            <Insets bottom="5.0" left="15.0" right="5.0" top="5.0" />
+         </VBox.margin>
+      </HBox>
+      <HBox alignment="CENTER_LEFT">
+         <children>
+            <Label text="Every:" />
+         </children>
+         <VBox.margin>
+            <Insets left="5.0" right="5.0" top="5.0" />
+         </VBox.margin>
+      </HBox>
+      <HBox alignment="CENTER_LEFT">
+         <children>
+            <TextField fx:id="everyCountEdit" prefWidth="60.0" />
+            <Label text=" " />
+            <ChoiceBox fx:id="everyIntervalChoice" prefWidth="150.0" />
+         </children>
+         <VBox.margin>
+            <Insets bottom="5.0" left="15.0" right="5.0" top="5.0" />
+         </VBox.margin>
+      </HBox>
+   </children>
+</VBox>

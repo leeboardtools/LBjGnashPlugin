@@ -15,16 +15,12 @@
  */
 package lbjgnash.ui;
 
-import com.leeboardtools.time.DateOffset;
-import com.leeboardtools.time.DatePeriods;
-import com.leeboardtools.time.DateRange;
+import com.leeboardtools.time.PeriodicDateGenerator;
+import com.leeboardtools.time.ui.PeriodicDateGeneratorViewController;
 import com.leeboardtools.time.ui.RangeChooserController;
-import com.leeboardtools.time.ui.RangeDateOffsetChooserController;
-import com.leeboardtools.time.ui.StartDateOffsetChooserController;
 import com.leeboardtools.util.ResourceSource;
 import java.io.IOException;
 import java.net.URL;
-import java.time.Period;
 import java.util.ResourceBundle;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -33,10 +29,12 @@ import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.scene.Parent;
+import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+import javafx.util.StringConverter;
 import jgnash.engine.Engine;
 
 /**
@@ -49,53 +47,82 @@ public class ReportSetupViewController implements Initializable {
     @FXML
     private TextField titleEdit;
     @FXML
-    private VBox startDateOffsetVBox;
-    @FXML
     private VBox timeRangeVBox;
-    @FXML
-    private VBox rangeDateOffsetVBox;
     @FXML
     private VBox accountsVBox;
     @FXML
     private VBox columnsVBox;
+    @FXML
+    private ChoiceBox<ReportDefinition.Standard> reportStyleChoice;
     
     private Stage stage;
     private ReportDefinition definition;
     private Engine engine;
     
-    private StartDateOffsetChooserController startDateOffsetController;
+    private PeriodicDateGeneratorViewController periodicDateController;
+    //private StartDateOffsetChooserController startDateOffsetController;
     
     private RangeChooserController rangeController;
     
-    private RangeDateOffsetChooserController rangeDateOffsetController;
+    //private RangeDateOffsetChooserController rangeDateOffsetController;
 
     private AccountFilterViewController accountFilterViewController;
     private AccountFilter workingAccountFilter;
+    
+    
+    private String netWorthText;
+    private String incomeExpenseText;
+    private String portfolioText;
+    
+    private StringConverter<ReportDefinition.Standard> reportStyleConverter = new StringConverter<ReportDefinition.Standard>() {
+        @Override
+        public String toString(ReportDefinition.Standard object) {
+            switch (object) {
+                case NET_WORTH :
+                    return netWorthText;
+                case INCOME_EXPENSE :
+                    return incomeExpenseText;
+                case PORTFOLIO :
+                    return portfolioText;
+            }
+            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        }
+
+        @Override
+        public ReportDefinition.Standard fromString(String string) {
+            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        }
+    };
+    @FXML
+    private VBox periodicDateVBox;
 
     /**
      * Initializes the controller class.
      */
     @Override
     public void initialize(URL url, ResourceBundle rb) {
-        // TODO
+        
         try {
+            netWorthText = ResourceSource.getString("Report.Title.NetWorth");
+            incomeExpenseText = ResourceSource.getString("Report.Title.IncomeExpense");
+            portfolioText = ResourceSource.getString("Report.Title.Portfolio");
+            reportStyleChoice.getItems().addAll(
+                    ReportDefinition.Standard.NET_WORTH,
+                    ReportDefinition.Standard.INCOME_EXPENSE,
+                    ReportDefinition.Standard.PORTFOLIO
+            );
+            reportStyleChoice.setConverter(reportStyleConverter);
+            
+            
             URL location;
             FXMLLoader fxmlLoader;
             Parent root;
             
-            location = StartDateOffsetChooserController.class.getResource("StartDateOffsetChooser.fxml");
+            location = PeriodicDateGeneratorViewController.class.getResource("PeriodicDateGeneratorView.fxml");
             fxmlLoader = new FXMLLoader(location, ResourceSource.getBundle());
             root = fxmlLoader.load();
-            startDateOffsetController = (StartDateOffsetChooserController)fxmlLoader.getController();
-            startDateOffsetVBox.getChildren().add(root);
-            
-            
-            location = RangeDateOffsetChooserController.class.getResource("RangeDateOffsetChooser.fxml");
-            fxmlLoader = new FXMLLoader(location, ResourceSource.getBundle());
-            root = fxmlLoader.load();
-            rangeDateOffsetController = (RangeDateOffsetChooserController)fxmlLoader.getController();
-            rangeDateOffsetVBox.getChildren().add(root);
-            
+            periodicDateController = (PeriodicDateGeneratorViewController)fxmlLoader.getController();
+            periodicDateVBox.getChildren().add(root);
             
             location = RangeChooserController.class.getResource("RangeChooser.fxml");
             fxmlLoader = new FXMLLoader(location, ResourceSource.getBundle());
@@ -124,10 +151,9 @@ public class ReportSetupViewController implements Initializable {
         
         this.titleEdit.setText(definition.getTitle());
         
-        DatePeriods dateSettings = this.definition.getDateSettings();
-        this.startDateOffsetController.setupController((DateOffset.Basic)dateSettings.getStartDateOffset(), stage);
-        this.rangeDateOffsetController.setupController((DateOffset.Basic)dateSettings.getRangeOffset(), stage);
-        
+        PeriodicDateGenerator dateGenerator = this.definition.getDateGenerator();
+        this.periodicDateController.setupController(dateGenerator, stage);
+
         this.workingAccountFilter= new AccountFilter();
         this.workingAccountFilter.copyFrom(definition.getAccountFilter());
         this.accountFilterViewController.setupController(engine, workingAccountFilter);
@@ -136,22 +162,14 @@ public class ReportSetupViewController implements Initializable {
     @FXML
     private void onOK(ActionEvent event) {
         if (this.definition != null) {
-            if (!this.startDateOffsetController.validate()) {
+            if (!this.periodicDateController.validate()) {
                 return;
             }
-            if (!this.rangeDateOffsetController.validate()) {
-                return;
+
+            PeriodicDateGenerator dateGenerator = this.periodicDateController.getPeriodicDateGenerator();
+            if (!dateGenerator.equals(this.definition.getDateGenerator())) {
+                this.definition.setDateGenerator(dateGenerator);
             }
-            
-            DatePeriods dateSettings = this.definition.getDateSettings();
-            Period period = dateSettings.getPeriod();
-            int periodCount = dateSettings.getPeriodCount();
-            DateOffset startDateOffset = this.startDateOffsetController.getStartDateOffset();
-            DateRange.Generator rangeGenerator = dateSettings.getRangeGenerator();
-            DateOffset rangeOffset = this.rangeDateOffsetController.getRangeDateOffset();
-            
-            dateSettings = new DatePeriods(period, periodCount, startDateOffset, rangeGenerator, rangeOffset);
-            this.definition.setDateSettings(dateSettings);
 
             this.definition.setTitle(this.titleEdit.getText());
             
@@ -166,15 +184,4 @@ public class ReportSetupViewController implements Initializable {
     }
     
     
-    @FXML
-    private void onNetWorth(ActionEvent event) {
-    }
-
-    @FXML
-    private void onIncomeExpense(ActionEvent event) {
-    }
-
-    @FXML
-    private void onPortfolio(ActionEvent event) {
-    }
 }

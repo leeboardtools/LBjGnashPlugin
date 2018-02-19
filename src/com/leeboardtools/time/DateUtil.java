@@ -18,6 +18,11 @@ package com.leeboardtools.time;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.Month;
+import java.time.format.TextStyle;
+import java.time.temporal.ChronoUnit;
+import java.time.temporal.TemporalUnit;
+import java.util.Locale;
+import javafx.util.StringConverter;
 
 /**
  * Some handy dandy date manipulation routines...
@@ -233,5 +238,53 @@ public class DateUtil {
      */
     public static LocalDate minusQuarters(LocalDate refDate, int quarters) {
         return refDate.minusMonths(quarters * 3);
+    }
+    
+    /**
+     * Returns the number of days to go from one date to another date.
+     * @param refDate   The reference date.
+     * @param destDate  The date to go to.
+     * @return The number of days, positive if destDate is after refDate, negative if destDate is before refDate.
+     */
+    public static long daysTo(LocalDate refDate, LocalDate destDate) {
+        return refDate.until(destDate, ChronoUnit.DAYS);
+    }
+    
+    
+    /**
+     * String converter for {@link DayOfWeek}.
+     */
+    public static class DayOfWeekStringConverter extends StringConverter<DayOfWeek> {
+        private final TextStyle textStyle;
+        private final Locale locale;
+
+        public DayOfWeekStringConverter(TextStyle style, Locale locale) {
+            this.textStyle = (style == null) ? TextStyle.FULL_STANDALONE : style;
+            this.locale = (locale == null) ? Locale.getDefault() : locale;
+        }
+        public DayOfWeekStringConverter() {
+            this(null, null);
+        }
+        public DayOfWeekStringConverter(TextStyle style) {
+            this(style, null);
+        }
+
+        @Override
+        public String toString(DayOfWeek object) {
+            return object.getDisplayName(textStyle, locale);
+        }
+
+        @Override
+        public DayOfWeek fromString(String string) {
+            for (int i = 1; i <= 7; ++i) {
+                DayOfWeek dayOfWeek = DayOfWeek.of(i);
+                String displayName = toString(dayOfWeek);
+                if (displayName.equals(string)) {
+                    return dayOfWeek;
+                }
+            }
+            return null;
+        }
+        
     }
 }

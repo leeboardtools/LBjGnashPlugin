@@ -15,9 +15,8 @@
  */
 package lbjgnash.ui;
 
-import com.leeboardtools.time.DatePeriods;
-import com.leeboardtools.time.DateRange;
-import com.leeboardtools.time.PeriodUtil;
+import com.leeboardtools.time.DateOffset;
+import com.leeboardtools.time.PeriodicDateGenerator;
 import com.leeboardtools.util.CompositeObservable;
 import com.leeboardtools.util.ResourceSource;
 import javafx.beans.property.ObjectProperty;
@@ -45,15 +44,27 @@ public class ReportDefinition extends CompositeObservable {
     }
     
     
-    private final ObjectProperty<DatePeriods> dateSettings = new SimpleObjectProperty<>(this, "dateSettings", null);
-    public final ObjectProperty<DatePeriods> dateSettingsProperty() {
-        return dateSettings;
+    private final ObjectProperty<PeriodicDateGenerator> dateGenerator = new SimpleObjectProperty<>(this, "dateGenerator", null);
+    public final ObjectProperty<PeriodicDateGenerator> dateGeneratorProperty() {
+        return dateGenerator;
     }
-    public final DatePeriods getDateSettings() {
-        return dateSettings.get();
+    public final PeriodicDateGenerator getDateGenerator() {
+        return dateGenerator.get();
     }
-    public final void setDateSettings(DatePeriods value) {
-        dateSettings.set(value);
+    public final void setDateGenerator(PeriodicDateGenerator value) {
+        dateGenerator.set(value);
+    }
+    
+    
+    private final ObjectProperty<DateOffset> rangeDateOffset = new SimpleObjectProperty<>(this, "rangeDateOffset", null);
+    public final ObjectProperty<DateOffset> rangeDateOffsetProperty() {
+        return rangeDateOffset;
+    }
+    public final DateOffset getRangeDateOffset() {
+        return rangeDateOffset.get();
+    }
+    public final void setRangeDateOffset(DateOffset value) {
+        rangeDateOffset.set(value);
     }
     
     
@@ -72,7 +83,7 @@ public class ReportDefinition extends CompositeObservable {
         title.addListener((property, oldValue, newValue) -> {
             markModified();
         });
-        dateSettings.addListener((property, oldValue, newValue) -> {
+        dateGenerator.addListener((property, oldValue, newValue) -> {
             markModified();
         });
         accountFilter.addListener((change)-> {
@@ -84,7 +95,7 @@ public class ReportDefinition extends CompositeObservable {
     public void copyFrom(ReportDefinition other) {
         if (this != other) {
             this.setTitle(other.getTitle());
-            this.setDateSettings(other.getDateSettings());
+            this.setDateGenerator(other.getDateGenerator());
         }
     }
     
@@ -111,13 +122,12 @@ public class ReportDefinition extends CompositeObservable {
         }
     }
     
+    
     public static ReportDefinition standardNetWorthDefintion() {
         ReportDefinition definition = new ReportDefinition();
         definition.setTitle(ResourceSource.getString("Report.Title.NetWorth"));
         
-        definition.setDateSettings(new DatePeriods(PeriodUtil.fromStandard(PeriodUtil.Standard.YEAR, 0),
-                0,
-                null));
+        definition.setDateGenerator(new PeriodicDateGenerator(DateOffset.SAME_DAY, DateOffset.END_OF_LAST_YEAR, 0));
         definition.getAccountFilter().getAccountGroupsToInclude().add(AccountGroup.ASSET);
         definition.getAccountFilter().getAccountGroupsToInclude().add(AccountGroup.LIABILITY);
         
@@ -128,11 +138,9 @@ public class ReportDefinition extends CompositeObservable {
         ReportDefinition definition = new ReportDefinition();
         definition.setTitle(ResourceSource.getString("Report.Title.IncomeExpense"));
 
-        definition.setDateSettings(new DatePeriods(PeriodUtil.fromStandard(PeriodUtil.Standard.YEAR, 0),
-                0,
-                null,
-                new DateRange.PreceedingMonths(12),
-                null));
+        
+        definition.setDateGenerator(new PeriodicDateGenerator(DateOffset.SAME_DAY, DateOffset.END_OF_LAST_YEAR, 0));
+        definition.setRangeDateOffset(new DateOffset.Basic(DateOffset.Interval.YEAR, 1, DateOffset.IntervalRelation.FIRST_DAY));
         definition.getAccountFilter().getAccountGroupsToInclude().add(AccountGroup.INCOME);
         definition.getAccountFilter().getAccountGroupsToInclude().add(AccountGroup.EXPENSE);
         
@@ -143,9 +151,7 @@ public class ReportDefinition extends CompositeObservable {
         ReportDefinition definition = new ReportDefinition();
         definition.setTitle(ResourceSource.getString("Report.Title.Portfolio"));
 
-        definition.setDateSettings(new DatePeriods(PeriodUtil.fromStandard(PeriodUtil.Standard.YEAR, 0),
-                0,
-                null));
+        definition.setDateGenerator(new PeriodicDateGenerator(DateOffset.SAME_DAY, DateOffset.END_OF_LAST_YEAR, 0));
         definition.getAccountFilter().getAccountTypesToInclude().add(AccountType.CASH);
         definition.getAccountFilter().getAccountGroupsToInclude().add(AccountGroup.INVEST);
         

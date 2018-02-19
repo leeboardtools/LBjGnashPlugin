@@ -17,6 +17,7 @@ package com.leeboardtools.time;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.Month;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
@@ -36,32 +37,37 @@ public class DateOffsetTest {
         DateOffset dateOffset;
         LocalDate date;
         dateOffset = new DateOffset.Basic(DateOffset.Interval.YEAR, 0, 
-                DateOffset.IntervalEnd.FIRST_DAY, null, null);
+                DateOffset.IntervalRelation.FIRST_DAY, null, null);
         date = dateOffset.getOffsetDate(LocalDate.of(2017, 3, 21));
         assertEquals(LocalDate.of(2017, 1, 1), date);
         
         dateOffset = new DateOffset.Basic(DateOffset.Interval.YEAR, 2, 
-                DateOffset.IntervalEnd.FIRST_DAY, null, null);
+                DateOffset.IntervalRelation.FIRST_DAY, null, null);
         date = dateOffset.getOffsetDate(LocalDate.of(2017, 3, 21));
         assertEquals(LocalDate.of(2019, 1, 1), date);
 
+        dateOffset = new DateOffset.Basic(DateOffset.Interval.YEAR, 2, 
+                DateOffset.IntervalRelation.CURRENT_DAY, null, null);
+        date = dateOffset.getOffsetDate(LocalDate.of(2017, 3, 21));
+        assertEquals(LocalDate.of(2019, 3, 21), date);
+
         dateOffset = new DateOffset.Basic(DateOffset.Interval.YEAR, 0, 
-                DateOffset.IntervalEnd.LAST_DAY, null, null);
+                DateOffset.IntervalRelation.LAST_DAY, null, null);
         date = dateOffset.getOffsetDate(LocalDate.of(2017, 3, 21));
         assertEquals(LocalDate.of(2017, 12, 31), date);
         
         dateOffset = new DateOffset.Basic(DateOffset.Interval.YEAR, 2, 
-                DateOffset.IntervalEnd.LAST_DAY, null, null);
+                DateOffset.IntervalRelation.LAST_DAY, null, null);
         date = dateOffset.getOffsetDate(LocalDate.of(2017, 3, 21));
         assertEquals(LocalDate.of(2015, 12, 31), date);
         
         dateOffset = new DateOffset.Basic(DateOffset.Interval.YEAR, 0, 
-                DateOffset.IntervalEnd.FIRST_DAY, new DateOffset.DayOffset(4), null);
+                DateOffset.IntervalRelation.FIRST_DAY, new DateOffset.DayOffset(4), null);
         date = dateOffset.getOffsetDate(LocalDate.of(2017, 3, 21));
         assertEquals(LocalDate.of(2017, 1, 5), date);
         
         dateOffset = new DateOffset.Basic(DateOffset.Interval.YEAR, 0, 
-                DateOffset.IntervalEnd.LAST_DAY, new DateOffset.DayOffset(3), null);
+                DateOffset.IntervalRelation.LAST_DAY, new DateOffset.DayOffset(3), null);
         date = dateOffset.getOffsetDate(LocalDate.of(2017, 3, 21));
         assertEquals(LocalDate.of(2017, 12, 28), date);
     }
@@ -73,32 +79,37 @@ public class DateOffsetTest {
         DateOffset dateOffset;
         LocalDate date;
         dateOffset = new DateOffset.Basic(DateOffset.Interval.QUARTER, 0, 
-                DateOffset.IntervalEnd.FIRST_DAY, null, null);
+                DateOffset.IntervalRelation.FIRST_DAY, null, null);
         date = dateOffset.getOffsetDate(LocalDate.of(2017, 5, 21));
         assertEquals(LocalDate.of(2017, 4, 1), date);
         
         dateOffset = new DateOffset.Basic(DateOffset.Interval.QUARTER, 2, 
-                DateOffset.IntervalEnd.FIRST_DAY, null, null);
+                DateOffset.IntervalRelation.FIRST_DAY, null, null);
         date = dateOffset.getOffsetDate(LocalDate.of(2017, 5, 21));
         assertEquals(LocalDate.of(2017, 10, 1), date);
 
+        dateOffset = new DateOffset.Basic(DateOffset.Interval.QUARTER, 2, 
+                DateOffset.IntervalRelation.CURRENT_DAY, null, null);
+        date = dateOffset.getOffsetDate(LocalDate.of(2017, 5, 21));
+        assertEquals(LocalDate.of(2017, 11, 21), date);
+
         dateOffset = new DateOffset.Basic(DateOffset.Interval.QUARTER, 0, 
-                DateOffset.IntervalEnd.LAST_DAY, null, null);
+                DateOffset.IntervalRelation.LAST_DAY, null, null);
         date = dateOffset.getOffsetDate(LocalDate.of(2017, 5, 21));
         assertEquals(LocalDate.of(2017, 6, 30), date);
         
         dateOffset = new DateOffset.Basic(DateOffset.Interval.QUARTER, 2, 
-                DateOffset.IntervalEnd.LAST_DAY, null, null);
+                DateOffset.IntervalRelation.LAST_DAY, null, null);
         date = dateOffset.getOffsetDate(LocalDate.of(2017, 5, 21));
         assertEquals(LocalDate.of(2016, 12, 31), date);
         
         dateOffset = new DateOffset.Basic(DateOffset.Interval.QUARTER, 0, 
-                DateOffset.IntervalEnd.FIRST_DAY, new DateOffset.DayOffset(4), null);
+                DateOffset.IntervalRelation.FIRST_DAY, new DateOffset.DayOffset(4), null);
         date = dateOffset.getOffsetDate(LocalDate.of(2017, 5, 21));
         assertEquals(LocalDate.of(2017, 4, 5), date);
         
         dateOffset = new DateOffset.Basic(DateOffset.Interval.QUARTER, 0, 
-                DateOffset.IntervalEnd.LAST_DAY, new DateOffset.DayOffset(3), null);
+                DateOffset.IntervalRelation.LAST_DAY, new DateOffset.DayOffset(3), null);
         date = dateOffset.getOffsetDate(LocalDate.of(2017, 5, 21));
         assertEquals(LocalDate.of(2017, 6, 27), date);
     }
@@ -110,34 +121,39 @@ public class DateOffsetTest {
         DateOffset dateOffset;
         LocalDate date;
         dateOffset = new DateOffset.Basic(DateOffset.Interval.MONTH, 0, 
-                DateOffset.IntervalEnd.FIRST_DAY, null, null);
+                DateOffset.IntervalRelation.FIRST_DAY, null, null);
         date = dateOffset.getOffsetDate(LocalDate.of(2017, 5, 21));
         assertEquals(LocalDate.of(2017, 5, 1), date);
         
         dateOffset = new DateOffset.Basic(DateOffset.Interval.MONTH, 2, 
-                DateOffset.IntervalEnd.FIRST_DAY, null, null);
+                DateOffset.IntervalRelation.FIRST_DAY, null, null);
         date = dateOffset.getOffsetDate(LocalDate.of(2017, 5, 21));
         assertEquals(LocalDate.of(2017, 7, 1), date);
 
+        dateOffset = new DateOffset.Basic(DateOffset.Interval.MONTH, 2, 
+                DateOffset.IntervalRelation.CURRENT_DAY, null, null);
+        date = dateOffset.getOffsetDate(LocalDate.of(2017, 5, 21));
+        assertEquals(LocalDate.of(2017, 7, 21), date);
+
         dateOffset = new DateOffset.Basic(DateOffset.Interval.MONTH, 0, 
-                DateOffset.IntervalEnd.LAST_DAY, null, null);
+                DateOffset.IntervalRelation.LAST_DAY, null, null);
         date = dateOffset.getOffsetDate(LocalDate.of(2017, 6, 21));
         assertEquals(LocalDate.of(2017, 6, 30), date);
         
         dateOffset = new DateOffset.Basic(DateOffset.Interval.MONTH, 2, 
-                DateOffset.IntervalEnd.LAST_DAY, null, null);
+                DateOffset.IntervalRelation.LAST_DAY, null, null);
         date = dateOffset.getOffsetDate(LocalDate.of(2017, 9, 21));
         assertEquals(LocalDate.of(2017, 7, 31), date);
         
         // 2017-5-1 was a Monday,.
         dateOffset = new DateOffset.Basic(DateOffset.Interval.MONTH, 0, 
-                DateOffset.IntervalEnd.FIRST_DAY, new DateOffset.NthDayOfWeekOffset(DayOfWeek.TUESDAY, 2), null);
+                DateOffset.IntervalRelation.FIRST_DAY, new DateOffset.NthDayOfWeekOffset(DayOfWeek.TUESDAY, 2), null);
         date = dateOffset.getOffsetDate(LocalDate.of(2017, 5, 21));
         assertEquals(LocalDate.of(2017, 5, 9), date);
         
         // 2017-5-31 was a Wednesday.
         dateOffset = new DateOffset.Basic(DateOffset.Interval.MONTH, 0, 
-                DateOffset.IntervalEnd.LAST_DAY, new DateOffset.NthDayOfWeekOffset(DayOfWeek.TUESDAY, 1), null);
+                DateOffset.IntervalRelation.LAST_DAY, new DateOffset.NthDayOfWeekOffset(DayOfWeek.TUESDAY, 1), null);
         date = dateOffset.getOffsetDate(LocalDate.of(2017, 5, 21));
         assertEquals(LocalDate.of(2017, 5, 30), date);
     }
@@ -152,42 +168,47 @@ public class DateOffsetTest {
         
         // 2017-5-21 is a Sunday.
         dateOffset = new DateOffset.Basic(DateOffset.Interval.WEEK, 0, 
-                DateOffset.IntervalEnd.FIRST_DAY, null, null);
+                DateOffset.IntervalRelation.FIRST_DAY, null, null);
         date = dateOffset.getOffsetDate(LocalDate.of(2017, 5, 21));
         assertEquals(LocalDate.of(2017, 5, 21), date);
         
         dateOffset = new DateOffset.Basic(DateOffset.Interval.WEEK, 0, 
-                DateOffset.IntervalEnd.FIRST_DAY, null, DayOfWeek.TUESDAY);
+                DateOffset.IntervalRelation.FIRST_DAY, null, DayOfWeek.TUESDAY);
         date = dateOffset.getOffsetDate(LocalDate.of(2017, 5, 21));
         assertEquals(LocalDate.of(2017, 5, 16), date);
         
         dateOffset = new DateOffset.Basic(DateOffset.Interval.WEEK, 2, 
-                DateOffset.IntervalEnd.FIRST_DAY, null, DayOfWeek.TUESDAY);
+                DateOffset.IntervalRelation.FIRST_DAY, null, DayOfWeek.TUESDAY);
         date = dateOffset.getOffsetDate(LocalDate.of(2017, 5, 21));
         assertEquals(LocalDate.of(2017, 5, 30), date);
 
+        dateOffset = new DateOffset.Basic(DateOffset.Interval.WEEK, 2, 
+                DateOffset.IntervalRelation.CURRENT_DAY, null, DayOfWeek.TUESDAY);
+        date = dateOffset.getOffsetDate(LocalDate.of(2017, 5, 21));
+        assertEquals(LocalDate.of(2017, 5, 21).plusDays(14), date);
+
         dateOffset = new DateOffset.Basic(DateOffset.Interval.WEEK, 0, 
-                DateOffset.IntervalEnd.LAST_DAY, null, null);
+                DateOffset.IntervalRelation.LAST_DAY, null, null);
         date = dateOffset.getOffsetDate(LocalDate.of(2017, 5, 21));
         assertEquals(LocalDate.of(2017, 5, 21), date);
         
         dateOffset = new DateOffset.Basic(DateOffset.Interval.WEEK, 0, 
-                DateOffset.IntervalEnd.LAST_DAY, null, DayOfWeek.TUESDAY);
+                DateOffset.IntervalRelation.LAST_DAY, null, DayOfWeek.TUESDAY);
         date = dateOffset.getOffsetDate(LocalDate.of(2017, 5, 21));
         assertEquals(LocalDate.of(2017, 5, 23), date);
         
         dateOffset = new DateOffset.Basic(DateOffset.Interval.WEEK, 2, 
-                DateOffset.IntervalEnd.LAST_DAY, null, DayOfWeek.TUESDAY);
+                DateOffset.IntervalRelation.LAST_DAY, null, DayOfWeek.TUESDAY);
         date = dateOffset.getOffsetDate(LocalDate.of(2017, 5, 21));
         assertEquals(LocalDate.of(2017, 5, 9), date);
         
         dateOffset = new DateOffset.Basic(DateOffset.Interval.WEEK, 0, 
-                DateOffset.IntervalEnd.FIRST_DAY, new DateOffset.DayOffset(4), null);
+                DateOffset.IntervalRelation.FIRST_DAY, new DateOffset.DayOffset(4), null);
         date = dateOffset.getOffsetDate(LocalDate.of(2017, 5, 21));
         assertEquals(LocalDate.of(2017, 5, 25), date);
         
         dateOffset = new DateOffset.Basic(DateOffset.Interval.WEEK, 0, 
-                DateOffset.IntervalEnd.LAST_DAY, new DateOffset.DayOffset(3), null);
+                DateOffset.IntervalRelation.LAST_DAY, new DateOffset.DayOffset(3), null);
         date = dateOffset.getOffsetDate(LocalDate.of(2017, 5, 21));
         assertEquals(LocalDate.of(2017, 5, 18), date);
 
@@ -200,35 +221,61 @@ public class DateOffsetTest {
         DateOffset dateOffset;
         LocalDate date;
         dateOffset = new DateOffset.Basic(DateOffset.Interval.DAY, 0, 
-                DateOffset.IntervalEnd.FIRST_DAY, null, null);
+                DateOffset.IntervalRelation.FIRST_DAY, null, null);
         date = dateOffset.getOffsetDate(LocalDate.of(2017, 5, 21));
         assertEquals(LocalDate.of(2017, 5, 21), date);
         
         dateOffset = new DateOffset.Basic(DateOffset.Interval.DAY, 2, 
-                DateOffset.IntervalEnd.FIRST_DAY, null, null);
+                DateOffset.IntervalRelation.FIRST_DAY, null, null);
+        date = dateOffset.getOffsetDate(LocalDate.of(2017, 5, 21));
+        assertEquals(LocalDate.of(2017, 5, 23), date);
+
+        dateOffset = new DateOffset.Basic(DateOffset.Interval.DAY, 2, 
+                DateOffset.IntervalRelation.CURRENT_DAY, null, null);
         date = dateOffset.getOffsetDate(LocalDate.of(2017, 5, 21));
         assertEquals(LocalDate.of(2017, 5, 23), date);
 
         dateOffset = new DateOffset.Basic(DateOffset.Interval.DAY, 0, 
-                DateOffset.IntervalEnd.LAST_DAY, null, null);
+                DateOffset.IntervalRelation.LAST_DAY, null, null);
         date = dateOffset.getOffsetDate(LocalDate.of(2017, 5, 21));
         assertEquals(LocalDate.of(2017, 5, 21), date);
         
         dateOffset = new DateOffset.Basic(DateOffset.Interval.DAY, 2, 
-                DateOffset.IntervalEnd.LAST_DAY, null, null);
+                DateOffset.IntervalRelation.LAST_DAY, null, null);
         date = dateOffset.getOffsetDate(LocalDate.of(2017, 5, 21));
         assertEquals(LocalDate.of(2017, 5, 19), date);
         
         dateOffset = new DateOffset.Basic(DateOffset.Interval.DAY, 0, 
-                DateOffset.IntervalEnd.FIRST_DAY, new DateOffset.DayOffset(4), null);
+                DateOffset.IntervalRelation.FIRST_DAY, new DateOffset.DayOffset(4), null);
         date = dateOffset.getOffsetDate(LocalDate.of(2017, 5, 21));
         assertEquals(LocalDate.of(2017, 5, 25), date);
         
         dateOffset = new DateOffset.Basic(DateOffset.Interval.DAY, 0, 
-                DateOffset.IntervalEnd.LAST_DAY, new DateOffset.DayOffset(3), null);
+                DateOffset.IntervalRelation.LAST_DAY, new DateOffset.DayOffset(3), null);
         date = dateOffset.getOffsetDate(LocalDate.of(2017, 5, 21));
         assertEquals(LocalDate.of(2017, 5, 18), date);
     }
     
+    @Test
+    public void testPredefined() {
+        LocalDate date;
+        
+        date = LocalDate.of(2017, 3, 15);
+        assertEquals(LocalDate.of(2017, 3, 15), DateOffset.SAME_DAY.getOffsetDate(date));
+        
+        assertEquals(LocalDate.of(2016, 3, 15), DateOffset.TWELVE_MONTHS_PRIOR.getOffsetDate(date));
+        assertEquals(LocalDate.of(2015, 3, 15), DateOffset.TWELVE_MONTHS_PRIOR.getOffsetDate(LocalDate.of(2016, 3, 15)));
+        
+        assertEquals(LocalDate.of(2017, 2, 15), DateOffset.ONE_MONTH_PRIOR.getOffsetDate(date));
+        
+        assertEquals(LocalDate.of(2017, 1, 1), DateOffset.START_OF_YEAR.getOffsetDate(date));
+        assertEquals(LocalDate.of(2017, 12, 31), DateOffset.END_OF_YEAR.getOffsetDate(date));
+        assertEquals(LocalDate.of(2017, 3, 1), DateOffset.START_OF_MONTH.getOffsetDate(date));
+        assertEquals(LocalDate.of(2017, 3, 31), DateOffset.END_OF_MONTH.getOffsetDate(date));
+        assertEquals(LocalDate.of(2016, 12, 31), DateOffset.END_OF_LAST_YEAR.getOffsetDate(date));
+        assertEquals(LocalDate.of(2016, 1, 1), DateOffset.START_OF_LAST_YEAR.getOffsetDate(date));
+        assertEquals(LocalDate.of(2017, 2, 28), DateOffset.END_OF_LAST_MONTH.getOffsetDate(date));
+        assertEquals(LocalDate.of(2017, 2, 1), DateOffset.START_OF_LAST_MONTH.getOffsetDate(date));
+    }
     
 }
