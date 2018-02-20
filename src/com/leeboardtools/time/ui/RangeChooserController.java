@@ -78,4 +78,5 @@ public class RangeChooserController implements Initializable {
         DateOffset.Interval interval = periodChoice.getValue();
         return new DateOffset.Basic(interval, intervalOffset, DateOffset.IntervalRelation.CURRENT_DAY);
     }
+    
 }

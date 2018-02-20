@@ -7,7 +7,7 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-<VBox xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="lbjgnash.ui.ReportSetupViewController">
+<VBox prefWidth="800.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="lbjgnash.ui.ReportSetupViewController">
    <children>
       <HBox VBox.vgrow="ALWAYS">
          <children>

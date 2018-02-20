@@ -20,7 +20,6 @@ import java.time.LocalDate;
 import java.time.Month;
 import java.time.format.TextStyle;
 import java.time.temporal.ChronoUnit;
-import java.time.temporal.TemporalUnit;
 import java.util.Locale;
 import javafx.util.StringConverter;
 
@@ -253,6 +252,8 @@ public class DateUtil {
     
     /**
      * String converter for {@link DayOfWeek}.
+     * This calls {@link DayOfWeek#getDisplayName(java.time.format.TextStyle, java.util.Locale) }
+     * to obtain the string representation.
      */
     public static class DayOfWeekStringConverter extends StringConverter<DayOfWeek> {
         private final TextStyle textStyle;
@@ -287,4 +288,5 @@ public class DateUtil {
         }
         
     }
+    
 }

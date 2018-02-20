@@ -63,8 +63,8 @@ public class RangeDateOffsetChooserController implements Initializable {
     @FXML
     private ChoiceBox<DateOffset.Interval> dayOfWeekPeriodChoice;
     
-    private StringConverter<DateOffset.IntervalRelation> startEndConverter = new DateOffset.IntervalRelationStringConverter();
-    private StringConverter<DateOffset.Interval> periodConverter = new DateOffset.IntervalStringConverter();
+    private StringConverter<DateOffset.IntervalRelation> startEndConverter = DateOffset.INTERVAL_RELATION_STRING_CONVERTER;
+    private StringConverter<DateOffset.Interval> periodConverter = DateOffset.INTERVAL_STRING_CONVERTER;
     private StringConverter<DayOfWeek> dayOfWeekConverter = new DateUtil.DayOfWeekStringConverter(TextStyle.FULL);
     
     @FXML

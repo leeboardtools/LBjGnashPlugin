@@ -17,13 +17,10 @@ package lbjgnash.ui;
 
 import com.leeboardtools.util.CompositeObservable;
 import com.leeboardtools.util.SetUtil;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableSet;
 import javafx.collections.SetChangeListener;

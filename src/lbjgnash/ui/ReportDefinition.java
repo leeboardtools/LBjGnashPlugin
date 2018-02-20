@@ -18,11 +18,16 @@ package lbjgnash.ui;
 import com.leeboardtools.time.DateOffset;
 import com.leeboardtools.time.PeriodicDateGenerator;
 import com.leeboardtools.util.CompositeObservable;
+import com.leeboardtools.util.EnumStringConverter;
 import com.leeboardtools.util.ResourceSource;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
+import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener;
+import javafx.collections.ObservableList;
+import javafx.util.StringConverter;
 import jgnash.engine.AccountGroup;
 import jgnash.engine.AccountType;
 
@@ -41,6 +46,18 @@ public class ReportDefinition extends CompositeObservable {
     }
     public final void setTitle(String value) {
         title.set(value);
+    }
+    
+    
+    private final ObjectProperty<Style> style = new SimpleObjectProperty<>(this, "style", Style.CUSTOM);
+    public final ObjectProperty<Style> styleProperty() {
+        return style;
+    }
+    public final Style getStyle() {
+        return style.get();
+    }
+    public final void setStyle(Style value) {
+        style.set(value);
     }
     
     
@@ -74,6 +91,12 @@ public class ReportDefinition extends CompositeObservable {
     }
     
     
+    private final ObservableList<ColumnType> columnTypes = FXCollections.observableArrayList();
+    public final ObservableList<ColumnType> getColumnTypes() {
+        return columnTypes;
+    }
+    
+    
     protected void markModified() {
         fireInvalidationListeners();
     }
@@ -83,10 +106,19 @@ public class ReportDefinition extends CompositeObservable {
         title.addListener((property, oldValue, newValue) -> {
             markModified();
         });
+        style.addListener((property, oldValue, newValue) -> {
+            markModified();
+        });
         dateGenerator.addListener((property, oldValue, newValue) -> {
             markModified();
         });
+        rangeDateOffset.addListener((property, oldValue, newValue) -> {
+            markModified();
+        });
         accountFilter.addListener((change)-> {
+            markModified();
+        });
+        columnTypes.addListener((ListChangeListener.Change<? extends ColumnType> c) -> {
             markModified();
         });
     }
@@ -95,18 +127,94 @@ public class ReportDefinition extends CompositeObservable {
     public void copyFrom(ReportDefinition other) {
         if (this != other) {
             this.setTitle(other.getTitle());
+            
+            this.setStyle(other.getStyle());
+            
             this.setDateGenerator(other.getDateGenerator());
+            
+            this.setRangeDateOffset(other.getRangeDateOffset());
+            
+            this.getAccountFilter().copyFrom(other.getAccountFilter());
+            
+            this.getColumnTypes().clear();
+            this.getColumnTypes().addAll(other.getColumnTypes());
         }
     }
     
     
-    public static enum Standard {
-        NET_WORTH,
-        INCOME_EXPENSE,
-        PORTFOLIO,
+    public static enum Style {
+        CUSTOM("ReportDefinition.Style.Custom", true),
+        NET_WORTH("ReportDefinition.Style.NetWorth", false),
+        INCOME_EXPENSE("ReportDefinition.Style.IncomeExpense", true),
+        PORTFOLIO("ReportDefinition.Style.Portfolio", false),
+        ;
+        
+        private final String stringResourceId;
+        private final boolean usesRangeDateOffset;
+        private Style(String stringResourceId, boolean usesRangeDateOffset) {
+            this.stringResourceId = stringResourceId;
+            this.usesRangeDateOffset = usesRangeDateOffset;
+        }
+        public final String getStringResourceId() {
+            return this.stringResourceId;
+        }
+        public final boolean usesRangeDateOffset() {
+            return this.usesRangeDateOffset;
+        }
     }
     
-    public static ReportDefinition fromStandard(Standard standard) {
+    public static final StringConverter<Style> STYLE_STRING_CONVERTER = new EnumStringConverter<Style> () {
+        @Override
+        protected Style[] getEnumValues() {
+            return Style.values();
+        }
+
+        @Override
+        protected String getEnumStringResourceId(Style enumValue) {
+            return enumValue.getStringResourceId();
+        }
+    };
+    
+    
+    
+    
+    public static enum ColumnType {
+        VALUE("ReportDefinition.ColumnType.Value"),
+        DELTA_PREVIOUS_PERIOD("ReportDefinition.ColumnType.DeltaPreviousPeriod"),
+        DELTA_OLDEST_PERIOD("ReportDefinition.ColumnType.DeltaOldestPeriod"),
+        PERCENT_DELTA_PREVIOUS_PERIOD("ReportDefinition.ColumnType.PercentDeltaPreviousPeriod"),
+        PERCENT_DELTA_OLDEST_PERIOD("ReportDefinition.ColumnType.PercentDeltaOldesPeriod"),
+        COST_BASIS("ReportDefinition.ColumnType.CostBasis"),
+        GAIN("ReportDefinition.ColumnType.Gain"),
+        QUANTITY("ReportDefinition.ColumnType.Quantity"),
+        PRICE("ReportDefinition.ColumnType.Price"),
+        ;
+        
+        private final String stringResourceId;
+        private ColumnType(String stringResourceId) {
+            this.stringResourceId = stringResourceId;
+        }
+        
+        public final String getStringResourceId() {
+            return stringResourceId;
+        }
+        
+    }
+    
+    public static final StringConverter<ColumnType> COLUMN_TYPE_STRING_CONVERTER = new EnumStringConverter<ColumnType> () {
+        @Override
+        protected ColumnType[] getEnumValues() {
+            return ColumnType.values();
+        }
+
+        @Override
+        protected String getEnumStringResourceId(ColumnType enumValue) {
+            return enumValue.getStringResourceId();
+        }
+    };
+    
+    
+    public static ReportDefinition fromStyle(Style standard) {
         switch (standard) {
             case NET_WORTH :
                 return standardNetWorthDefintion();
@@ -126,6 +234,7 @@ public class ReportDefinition extends CompositeObservable {
     public static ReportDefinition standardNetWorthDefintion() {
         ReportDefinition definition = new ReportDefinition();
         definition.setTitle(ResourceSource.getString("Report.Title.NetWorth"));
+        definition.setStyle(Style.NET_WORTH);
         
         definition.setDateGenerator(new PeriodicDateGenerator(DateOffset.SAME_DAY, DateOffset.END_OF_LAST_YEAR, 0));
         definition.getAccountFilter().getAccountGroupsToInclude().add(AccountGroup.ASSET);
@@ -137,7 +246,7 @@ public class ReportDefinition extends CompositeObservable {
     public static ReportDefinition standardIncomeExpenseDefinition() {
         ReportDefinition definition = new ReportDefinition();
         definition.setTitle(ResourceSource.getString("Report.Title.IncomeExpense"));
-
+        definition.setStyle(Style.INCOME_EXPENSE);
         
         definition.setDateGenerator(new PeriodicDateGenerator(DateOffset.SAME_DAY, DateOffset.END_OF_LAST_YEAR, 0));
         definition.setRangeDateOffset(new DateOffset.Basic(DateOffset.Interval.YEAR, 1, DateOffset.IntervalRelation.FIRST_DAY));
@@ -150,6 +259,7 @@ public class ReportDefinition extends CompositeObservable {
     public static ReportDefinition standardPortfolioDefinition() {
         ReportDefinition definition = new ReportDefinition();
         definition.setTitle(ResourceSource.getString("Report.Title.Portfolio"));
+        definition.setStyle(Style.PORTFOLIO);
 
         definition.setDateGenerator(new PeriodicDateGenerator(DateOffset.SAME_DAY, DateOffset.END_OF_LAST_YEAR, 0));
         definition.getAccountFilter().getAccountTypesToInclude().add(AccountType.CASH);

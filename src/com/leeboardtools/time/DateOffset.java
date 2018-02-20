@@ -16,6 +16,7 @@
 package com.leeboardtools.time;
 
 import com.leeboardtools.util.ArrayUtil;
+import com.leeboardtools.util.EnumStringConverter;
 import com.leeboardtools.util.ResourceSource;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -119,41 +120,19 @@ public interface DateOffset {
     /**
      * String converter for {@link Interval}.
      */
-    public static class IntervalStringConverter extends StringConverter<Interval> {
-        private static String [] text;
-        
-        private static void loadText() {
-            if (text == null) {
-                text = new String [Interval.values().length];
-                for (int i = 0; i < text.length; ++i) {
-                    text[i] = ResourceSource.getString(Interval.values()[i].getStringResourceId());
-                }
-            }
-        }
-        
+    public static final EnumStringConverter<Interval> INTERVAL_STRING_CONVERTER = new EnumStringConverter<Interval>() {
         @Override
-        public String toString(DateOffset.Interval object) {
-            loadText();
-            if (object != null) {
-                return text[object.ordinal()];
-            }
-            return null;
+        protected Interval[] getEnumValues() {
+            return Interval.values();
         }
 
         @Override
-        public DateOffset.Interval fromString(String string) {
-            loadText();
-            for (int i =0; i < text.length; ++i) {
-                if (text[i].equals(string)) {
-                    return Interval.values()[i];
-                }
-            }
-            return null;
+        protected String getEnumStringResourceId(Interval enumValue) {
+            return enumValue.getStringResourceId();
         }
-    }
-    public static final IntervalStringConverter INTERVAL_STRING_CONVERTER = new IntervalStringConverter();
+    };
     
-    
+
     /**
      * Determines which where in the interval to work from. Note that for {@link #LAST_DAY},
      * positive offsets go back in time.
@@ -190,39 +169,19 @@ public interface DateOffset {
         }
     }
     
-    public static class IntervalRelationStringConverter extends StringConverter<IntervalRelation> {
-        private static String [] text;
-        
-        private static void loadText() {
-            if (text == null) {
-                text = new String [IntervalRelation.values().length];
-                for (int i = 0; i < text.length; ++i) {
-                    text[i] = ResourceSource.getString(IntervalRelation.values()[i].getStringResourceId());
-                }
-            }
+    public static final EnumStringConverter<IntervalRelation> INTERVAL_RELATION_STRING_CONVERTER = new EnumStringConverter<IntervalRelation> () {
+        @Override
+        protected IntervalRelation[] getEnumValues() {
+            return IntervalRelation.values();
         }
 
         @Override
-        public String toString(IntervalRelation object) {
-            loadText();
-            if (object != null) {
-                return text[object.ordinal()];
-            }
-            return null;
+        protected String getEnumStringResourceId(IntervalRelation enumValue) {
+            return enumValue.getStringResourceId();
         }
-
-        @Override
-        public IntervalRelation fromString(String string) {
-            loadText();
-            for (int i =0; i < text.length; ++i) {
-                if (text[i].equals(string)) {
-                    return IntervalRelation.values()[i];
-                }
-            }
-            return null;
-        }
-    }
-    public static final IntervalRelationStringConverter INTERVAL_RELATION_STRING_CONVERTER = new IntervalRelationStringConverter();
+    };
+    
+    
     
     
     /**

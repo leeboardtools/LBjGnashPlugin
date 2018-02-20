@@ -23,7 +23,6 @@ import java.util.logging.Logger;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.layout.Region;
 import javafx.stage.Stage;
 import jgnash.engine.Engine;
 
@@ -43,10 +42,6 @@ public class ReportSetupView {
             Parent root = fxmlLoader.load();
             Scene scene = new Scene(root);
             //scene.getStylesheets().add("leeboardslog/Styles.css");
-            if (root instanceof Region) {
-                Region region = (Region)root;
-                region.setPrefSize(Region.USE_COMPUTED_SIZE, Region.USE_COMPUTED_SIZE);
-            }
             
             ReportSetupViewController controller = (ReportSetupViewController)fxmlLoader.getController();
             controller.setupController(definition, engine, stage);
