@@ -106,7 +106,56 @@
                         <VBox fx:id="columnsVBox">
                            <padding>
                               <Insets bottom="5.0" left="10.0" right="10.0" top="5.0" />
-                           </padding></VBox>
+                           </padding>
+                           <children>
+                              <HBox prefHeight="100.0" prefWidth="200.0">
+                                 <children>
+                                    <VBox HBox.hgrow="ALWAYS">
+                                       <children>
+                                          <Label text="Avaliable Columns:" />
+                                          <ListView fx:id="availableColumnsListView" prefHeight="200.0" prefWidth="200.0" />
+                                       </children>
+                                    </VBox>
+                                    <VBox alignment="CENTER">
+                                       <children>
+                                          <Button fx:id="useColumnButton" mnemonicParsing="false" onAction="#onUseColumn" prefWidth="70.0" text="Use">
+                                             <VBox.margin>
+                                                <Insets bottom="5.0" top="5.0" />
+                                             </VBox.margin>
+                                          </Button>
+                                          <Button fx:id="dontUseColumnButton" mnemonicParsing="false" onAction="#onDontUseColumn" prefWidth="70.0" text="Don't">
+                                             <VBox.margin>
+                                                <Insets bottom="5.0" top="5.0" />
+                                             </VBox.margin>
+                                          </Button>
+                                          <Button fx:id="upColumnButton" mnemonicParsing="false" onAction="#onUpColumn" prefWidth="70.0" text="Up">
+                                             <VBox.margin>
+                                                <Insets bottom="5.0" top="5.0" />
+                                             </VBox.margin>
+                                          </Button>
+                                          <Button fx:id="downColumnButton" mnemonicParsing="false" onAction="#onDownColumn" prefWidth="70.0" text="Down" VBox.vgrow="ALWAYS">
+                                             <VBox.margin>
+                                                <Insets bottom="5.0" top="5.0" />
+                                             </VBox.margin>
+                                          </Button>
+                                       </children>
+                                       <HBox.margin>
+                                          <Insets bottom="30.0" left="10.0" right="10.0" top="30.0" />
+                                       </HBox.margin>
+                                    </VBox>
+                                    <HBox prefHeight="100.0" prefWidth="200.0" HBox.hgrow="ALWAYS">
+                                       <children>
+                                          <VBox HBox.hgrow="ALWAYS">
+                                             <children>
+                                                <Label text="Columns To Use:" />
+                                                <ListView fx:id="usedColumnsListView" prefHeight="200.0" prefWidth="200.0" />
+                                             </children>
+                                          </VBox>
+                                       </children>
+                                    </HBox>
+                                 </children>
+                              </HBox>
+                           </children></VBox>
                      </content>
                   </Tab>
               </tabs>

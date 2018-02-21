@@ -30,11 +30,16 @@ import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.scene.Parent;
+import javafx.scene.control.Button;
 import javafx.scene.control.ChoiceBox;
+import javafx.scene.control.ListCell;
+import javafx.scene.control.ListView;
 import javafx.scene.control.TextField;
+import javafx.scene.control.cell.TextFieldListCell;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+import javafx.util.Callback;
 import jgnash.engine.Engine;
 
 /**
@@ -70,6 +75,18 @@ public class ReportSetupViewController implements Initializable {
     
     @FXML
     private VBox periodicDateVBox;
+    @FXML
+    private ListView<ReportDefinition.ColumnType> availableColumnsListView;
+    @FXML
+    private Button useColumnButton;
+    @FXML
+    private Button dontUseColumnButton;
+    @FXML
+    private Button upColumnButton;
+    @FXML
+    private Button downColumnButton;
+    @FXML
+    private ListView<ReportDefinition.ColumnType> usedColumnsListView;
     
     /**
      * Initializes the controller class.
@@ -111,6 +128,21 @@ public class ReportSetupViewController implements Initializable {
             accountFilterViewController = (AccountFilterViewController)fxmlLoader.getController();
             VBox.setVgrow(root, Priority.ALWAYS);
             accountsVBox.getChildren().add(root);
+            
+            
+            availableColumnsListView.setCellFactory((ListView<ReportDefinition.ColumnType> list) -> {
+                return new TextFieldListCell(ReportDefinition.COLUMN_TYPE_STRING_CONVERTER);
+            });
+            availableColumnsListView.getSelectionModel().selectedItemProperty().addListener((prop, oldValue, newValue) -> {
+                updateColumnButtons();
+            });
+
+            usedColumnsListView.setCellFactory((ListView<ReportDefinition.ColumnType> list) -> {
+                return new TextFieldListCell(ReportDefinition.COLUMN_TYPE_STRING_CONVERTER);
+            });
+            usedColumnsListView.getSelectionModel().selectedItemProperty().addListener((prop, oldValue, newValue) -> {
+                updateColumnButtons();
+            });
 
         } catch (IOException ex) {
             Logger.getLogger(ReportSetupViewController.class.getName()).log(Level.SEVERE, null, ex);
@@ -135,6 +167,19 @@ public class ReportSetupViewController implements Initializable {
         this.workingAccountFilter= new AccountFilter();
         this.workingAccountFilter.copyFrom(definition.getAccountFilter());
         this.accountFilterViewController.setupController(engine, workingAccountFilter);
+        
+        
+        this.availableColumnsListView.getItems().clear();
+        for (ReportDefinition.ColumnType columnType : ReportDefinition.ColumnType.values()) {
+            if (!definition.getColumnTypes().contains(columnType)) {
+                this.availableColumnsListView.getItems().add(columnType);
+            }
+        }
+        
+        this.usedColumnsListView.getItems().clear();
+        this.usedColumnsListView.getItems().addAll(definition.getColumnTypes());
+        
+        updateColumnButtons();
     }
 
     @FXML
@@ -163,6 +208,9 @@ public class ReportSetupViewController implements Initializable {
             this.definition.setTitle(this.titleEdit.getText());
             this.definition.setStyle(style);
             this.definition.getAccountFilter().copyFrom(this.workingAccountFilter);
+            
+            this.definition.getColumnTypes().clear();
+            this.definition.getColumnTypes().addAll(this.usedColumnsListView.getItems());
         }
         this.stage.close();
     }
@@ -171,6 +219,89 @@ public class ReportSetupViewController implements Initializable {
     private void onCancel(ActionEvent event) {
         this.stage.close();
     }
+
+    @FXML
+    private void onUseColumn(ActionEvent event) {
+        ReportDefinition.ColumnType columnType = this.availableColumnsListView.getSelectionModel().getSelectedItem();
+        if (columnType != null) {
+            int itemIndex = this.availableColumnsListView.getSelectionModel().getSelectedIndex();
+            this.availableColumnsListView.getItems().remove(columnType);
+            this.availableColumnsListView.getSelectionModel().select(itemIndex);
+            this.usedColumnsListView.getItems().add(columnType);
+            this.usedColumnsListView.getSelectionModel().select(columnType);
+        }
+    }
+
+    @FXML
+    private void onDontUseColumn(ActionEvent event) {
+        ReportDefinition.ColumnType columnType = this.usedColumnsListView.getSelectionModel().getSelectedItem();
+        if (columnType != null) {
+            int itemIndex = this.usedColumnsListView.getSelectionModel().getSelectedIndex();
+            this.usedColumnsListView.getItems().remove(columnType);
+            this.usedColumnsListView.getSelectionModel().select(itemIndex);
+            
+            int count = this.availableColumnsListView.getItems().size();
+            int insertBefore;
+            for (insertBefore = 0; insertBefore < count; ++insertBefore) {
+                if (this.availableColumnsListView.getItems().get(insertBefore).ordinal() > columnType.ordinal()) {
+                    break;
+                }
+            }
+            this.availableColumnsListView.getItems().add(insertBefore, columnType);
+            this.availableColumnsListView.getSelectionModel().select(columnType);
+        }
+    }
+
+    @FXML
+    private void onUpColumn(ActionEvent event) {
+        int itemIndex = this.usedColumnsListView.getSelectionModel().getSelectedIndex();
+        if (itemIndex > 0) {
+            ReportDefinition.ColumnType columnType = this.usedColumnsListView.getItems().remove(itemIndex);
+            this.usedColumnsListView.getItems().add(itemIndex - 1, columnType);
+            this.usedColumnsListView.getSelectionModel().select(columnType);
+        }
+    }
+
+    @FXML
+    private void onDownColumn(ActionEvent event) {
+        int itemIndex = this.usedColumnsListView.getSelectionModel().getSelectedIndex();
+        if ((itemIndex >= 0) && ((itemIndex + 1) < this.usedColumnsListView.getItems().size())) {
+            ReportDefinition.ColumnType columnType = this.usedColumnsListView.getItems().remove(itemIndex);
+            this.usedColumnsListView.getItems().add(itemIndex + 1, columnType);
+            this.usedColumnsListView.getSelectionModel().select(columnType);
+        }
+    }
     
+    private void updateColumnButtons() {
+        if (this.availableColumnsListView.getSelectionModel().getSelectedItem() == null) {
+            this.useColumnButton.setDisable(true);
+        }
+        else {
+            this.useColumnButton.setDisable(false);
+        }
+        
+        if (this.usedColumnsListView.getSelectionModel().getSelectedItem() == null) {
+            this.dontUseColumnButton.setDisable(true);
+            this.upColumnButton.setDisable(true);
+            this.downColumnButton.setDisable(true);
+        }
+        else {
+            this.dontUseColumnButton.setDisable(false);
+
+            if (this.usedColumnsListView.getSelectionModel().getSelectedIndex() == 0) {
+                this.upColumnButton.setDisable(true);
+            }
+            else {
+                this.upColumnButton.setDisable(false);
+            }
+            if ((this.usedColumnsListView.getSelectionModel().getSelectedIndex() + 1) >= this.usedColumnsListView.getItems().size()) {
+                this.downColumnButton.setDisable(true);
+            }
+            else {
+                this.downColumnButton.setDisable(false);
+            }
+        }
+        
+    }
     
 }
