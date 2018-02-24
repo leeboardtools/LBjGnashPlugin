@@ -15,6 +15,7 @@
  */
 package com.leeboardtools.time;
 
+import com.leeboardtools.json.JSONObject;
 import java.time.LocalDate;
 import java.time.Month;
 import java.util.Iterator;
@@ -137,4 +138,35 @@ public class PeriodicDateGeneratorTest {
     
 //    public static PeriodicDateGenerator SAME_DAY = new PeriodicDateGenerator(new DateOffset())
 
+    @Test
+    public void testJSON() {
+        PeriodicDateGenerator refGenerator;
+        JSONObject jsonObject;
+        PeriodicDateGenerator testGenerator;
+
+        DateOffset startDateOffset;
+        DateOffset.Basic periodDateOffset;
+        DateOffset endDateOffset;
+        
+        startDateOffset = new DateOffset.Basic(DateOffset.Interval.MONTH, 0, DateOffset.IntervalRelation.FIRST_DAY);
+        periodDateOffset = new DateOffset.Basic(DateOffset.Interval.YEAR, 1, DateOffset.IntervalRelation.LAST_DAY);
+        endDateOffset = new DateOffset.Basic(DateOffset.Interval.YEAR, 5, DateOffset.IntervalRelation.LAST_DAY);
+
+        refGenerator = new PeriodicDateGenerator(startDateOffset, periodDateOffset, endDateOffset);
+        jsonObject = PeriodicDateGenerator.toJSONObject(refGenerator);
+        testGenerator = PeriodicDateGenerator.fromJSONObject(jsonObject);
+        
+        assertEquals(refGenerator, testGenerator);
+        
+        
+        startDateOffset = new DateOffset.Basic(DateOffset.Interval.MONTH, 0, DateOffset.IntervalRelation.FIRST_DAY);
+        periodDateOffset = new DateOffset.Basic(DateOffset.Interval.YEAR, 1, DateOffset.IntervalRelation.LAST_DAY);
+        endDateOffset = null;
+
+        refGenerator = new PeriodicDateGenerator(startDateOffset, periodDateOffset, 5, endDateOffset);
+        jsonObject = PeriodicDateGenerator.toJSONObject(refGenerator);
+        testGenerator = PeriodicDateGenerator.fromJSONObject(jsonObject);
+        
+        assertEquals(refGenerator, testGenerator);
+    }
 }

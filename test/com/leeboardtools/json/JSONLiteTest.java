@@ -13,10 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.leeboardtools.util;
+package com.leeboardtools.json;
 
+import com.leeboardtools.json.JSONLite;
+import com.leeboardtools.json.JSONObject;
+import com.leeboardtools.json.JSONReader;
+import com.leeboardtools.json.JSONValue;
+import com.leeboardtools.json.JSONWriter;
+import com.leeboardtools.json.ParsingException;
 import java.io.IOException;
-import java.io.StringReader;
 import java.io.StringWriter;
 import org.junit.Assert;
 import org.junit.Test;
@@ -39,12 +44,12 @@ public class JSONLiteTest {
     public void testWriteReadJSONObject() throws Exception {
         StringWriter writer = new StringWriter();
         
-        JSONLite.JSONObject object = JSONLite.newJSONObject();
+        JSONObject object = JSONLite.newJSONObject();
         object.add("Abc", 123);
         
-        JSONLite.JSONReader jsonReader;
+        JSONReader jsonReader;
         
-        JSONLite.JSONWriter jsonWriter = new JSONLite.JSONWriter(writer, 0);
+        JSONWriter jsonWriter = new JSONWriter(writer, 0);
         jsonWriter.writeJSONObject(object);
         
         System.out.println("Single Abc:123");
@@ -52,7 +57,7 @@ public class JSONLiteTest {
         
         assertEquals("{\"Abc\":123}", writer.toString());
         
-        jsonReader = new JSONLite.JSONReader(writer.toString());
+        jsonReader = new JSONReader(writer.toString());
         assertEquals(object, jsonReader.readJSONObject());
         
         
@@ -67,7 +72,7 @@ public class JSONLiteTest {
         System.out.println(writer.toString());
         assertEquals("{\"Abc\":123,\"Def\":true,\"Ghi\":\"Text\",\"Jkl\":123.456}", writer.toString());
         
-        jsonReader = new JSONLite.JSONReader(writer.toString());
+        jsonReader = new JSONReader(writer.toString());
         assertEquals(object, jsonReader.readJSONObject());
 
         
@@ -87,12 +92,12 @@ public class JSONLiteTest {
                 + "}", 
                 writer.toString());
         
-        jsonReader = new JSONLite.JSONReader(writer.toString());
+        jsonReader = new JSONReader(writer.toString());
         assertEquals(object, jsonReader.readJSONObject());
         
 
         
-        JSONLite.JSONObject object2 = JSONLite.newJSONObject();
+        JSONObject object2 = JSONLite.newJSONObject();
         object2.add("123");
         object.add("Bcd", object2);
 
@@ -111,13 +116,13 @@ public class JSONLiteTest {
                 + "}",
                 writer.toString());
         
-        jsonReader = new JSONLite.JSONReader(writer.toString());
+        jsonReader = new JSONReader(writer.toString());
         assertEquals(object, jsonReader.readJSONObject());
 
         
         object.clear();
-        JSONLite.JSONValue [] array = new JSONLite.JSONValue [] {
-            new JSONLite.JSONValue(123)
+        JSONValue [] array = new JSONValue [] {
+            new JSONValue(123)
         };
         object.add("Array", array);
         
@@ -133,46 +138,46 @@ public class JSONLiteTest {
                 + "}",
                 writer.toString());
         
-        jsonReader = new JSONLite.JSONReader(writer.toString());
+        jsonReader = new JSONReader(writer.toString());
         assertEquals(object, jsonReader.readJSONObject());
     }
     
     static final double TOLERANCE = 1e-10;
     
-    void assertValue(double refValue, JSONLite.JSONValue value) {
-        assertEquals(JSONLite.ValueType.NUMBER, value.getValueType());
+    void assertValue(double refValue, JSONValue value) {
+        assertEquals(JSONValue.ValueType.NUMBER, value.getValueType());
         assertEquals(refValue, value.getDoubleValue(), TOLERANCE);
     }
 
-    void assertValue(int refValue, JSONLite.JSONValue value) {
-        assertEquals(JSONLite.ValueType.NUMBER, value.getValueType());
+    void assertValue(int refValue, JSONValue value) {
+        assertEquals(JSONValue.ValueType.NUMBER, value.getValueType());
         assertEquals(refValue, value.getIntValue());
     }
     
-    void assertValue(String refValue, JSONLite.JSONValue value) {
-        assertEquals(JSONLite.ValueType.STRING, value.getValueType());
+    void assertValue(String refValue, JSONValue value) {
+        assertEquals(JSONValue.ValueType.STRING, value.getValueType());
         assertEquals(refValue, value.getStringValue());
     }
-    void assertValue(boolean refValue, JSONLite.JSONValue value) {
+    void assertValue(boolean refValue, JSONValue value) {
         if (refValue) {
-            assertEquals(JSONLite.ValueType.TRUE, value.getValueType());
+            assertEquals(JSONValue.ValueType.TRUE, value.getValueType());
             assertTrue(value.isTrue());
         }
         else {
-            assertEquals(JSONLite.ValueType.FALSE, value.getValueType());
+            assertEquals(JSONValue.ValueType.FALSE, value.getValueType());
             assertTrue(value.isFalse());
         }
     }
-    void assertValueNull(JSONLite.JSONValue value) {
-        assertEquals(JSONLite.ValueType.NULL, value.getValueType());
+    void assertValueNull(JSONValue value) {
+        assertEquals(JSONValue.ValueType.NULL, value.getValueType());
         assertTrue(value.isNull());
     }
     
-    void assertFailReadValue(JSONLite.JSONReader reader) {
+    void assertFailReadValue(JSONReader reader) {
         try {
             reader.readJSONValue();
         }
-        catch (JSONLite.JSONException | IOException ex) {
+        catch (ParsingException | IOException ex) {
             return;
         }
         fail("Expected JSONLite.JSONException");
@@ -181,112 +186,112 @@ public class JSONLiteTest {
 
     @Test
     public void testReadJSONNumber() throws IOException {
-        JSONLite.JSONReader reader;
-        JSONLite.JSONValue value;
-        reader = new JSONLite.JSONReader("123");
+        JSONReader reader;
+        JSONValue value;
+        reader = new JSONReader("123");
         value = reader.readJSONValue();
         assertValue(123, value);
         
-        reader = new JSONLite.JSONReader("0");
+        reader = new JSONReader("0");
         value = reader.readJSONValue();
         assertValue(0, value);
         
-        reader = new JSONLite.JSONReader("-0");
+        reader = new JSONReader("-0");
         value = reader.readJSONValue();
         assertValue(-0, value);
         
-        reader = new JSONLite.JSONReader("-123");
+        reader = new JSONReader("-123");
         value = reader.readJSONValue();
         assertValue(-123, value);
         
-        reader = new JSONLite.JSONReader("1.23");
+        reader = new JSONReader("1.23");
         value = reader.readJSONValue();
         assertValue(1.23, value);
         
-        reader = new JSONLite.JSONReader("-1.23");
+        reader = new JSONReader("-1.23");
         value = reader.readJSONValue();
         assertValue(-1.23, value);
         
-        reader = new JSONLite.JSONReader("-12.3");
+        reader = new JSONReader("-12.3");
         value = reader.readJSONValue();
         assertValue(-12.3, value);
         
-        reader = new JSONLite.JSONReader("-1.23e1");
+        reader = new JSONReader("-1.23e1");
         value = reader.readJSONValue();
         assertValue(-1.23e1, value);
         
-        reader = new JSONLite.JSONReader("1.23e-10");
+        reader = new JSONReader("1.23e-10");
         value = reader.readJSONValue();
         assertValue(1.23e-10, value);
         
-        reader = new JSONLite.JSONReader("-0.23E-123");
+        reader = new JSONReader("-0.23E-123");
         value = reader.readJSONValue();
         assertValue(-0.23e-123, value);
 
         
-        reader = new JSONLite.JSONReader("-00.23E-123");
+        reader = new JSONReader("-00.23E-123");
         assertFailReadValue(reader);
         
-        reader = new JSONLite.JSONReader("-1.E-123");
+        reader = new JSONReader("-1.E-123");
         assertFailReadValue(reader);
         
-        reader = new JSONLite.JSONReader("-1.23a");
+        reader = new JSONReader("-1.23a");
         assertFailReadValue(reader);
         
-        reader = new JSONLite.JSONReader("a");
+        reader = new JSONReader("a");
         assertFailReadValue(reader);
     }
     
     @Test
     public void testReadJSONString() throws Exception {
-        JSONLite.JSONReader reader;
-        JSONLite.JSONValue value;
-        reader = new JSONLite.JSONReader("\"\"");
+        JSONReader reader;
+        JSONValue value;
+        reader = new JSONReader("\"\"");
         value = reader.readJSONValue();
         assertValue("", value);
 
-        reader = new JSONLite.JSONReader("   \" \\r \\n \\\" \\\\ \\/ \\b \\f \\t \"   ");
+        reader = new JSONReader("   \" \\r \\n \\\" \\\\ \\/ \\b \\f \\t \"   ");
         value = reader.readJSONValue();
         assertValue(" \r \n \" \\ / \b \f \t ", value);
 
-        reader = new JSONLite.JSONReader("\" \\uD834\\uDD1E \"");
+        reader = new JSONReader("\" \\uD834\\uDD1E \"");
         value = reader.readJSONValue();
         assertValue(" \uD834\uDD1E ", value);
         
-        reader = new JSONLite.JSONReader("\" \n \"");
+        reader = new JSONReader("\" \n \"");
         assertFailReadValue(reader);
     }
     
     @Test
     public void testReadJSONMiscValues() throws Exception {
-        JSONLite.JSONReader reader;
-        JSONLite.JSONValue value;
-        reader = new JSONLite.JSONReader(" \ntrue  ");
+        JSONReader reader;
+        JSONValue value;
+        reader = new JSONReader(" \ntrue  ");
         value = reader.readJSONValue();
         assertValue(true, value);
 
-        reader = new JSONLite.JSONReader(" false  ");
+        reader = new JSONReader(" false  ");
         value = reader.readJSONValue();
         assertValue(false, value);
 
-        reader = new JSONLite.JSONReader("null,");
+        reader = new JSONReader("null,");
         value = reader.readJSONValue();
         assertValueNull(value);
     }
 
     
-    void checkReader(JSONLite.JSONValue refArray [], JSONLite.JSONReader reader) throws IOException {
-        JSONLite.JSONValue [] testArray = reader.readJSONArray();
+    void checkReader(JSONValue refArray [], JSONReader reader) throws IOException {
+        JSONValue [] testArray = reader.readJSONArray();
         Assert.assertArrayEquals(refArray, testArray);
     }
 
     @Test
     public void testWriteReadJSONArray() throws Exception {
         StringWriter writer = new StringWriter();
-        JSONLite.JSONWriter jsonWriter = new JSONLite.JSONWriter(writer, 0);
-        JSONLite.JSONReader jsonReader;
+        JSONWriter jsonWriter = new JSONWriter(writer, 0);
+        JSONReader jsonReader;
         
-        JSONLite.JSONValue array[] = new JSONLite.JSONValue [] {};
+        JSONValue array[] = new JSONValue [] {};
         
         writer.getBuffer().delete(0, writer.getBuffer().length());
         jsonWriter.writeJSONArray(array);
@@ -294,12 +299,12 @@ public class JSONLiteTest {
         System.out.println(writer.toString());
         assertEquals("[]", writer.toString());
         
-        jsonReader = new JSONLite.JSONReader(writer.toString());
+        jsonReader = new JSONReader(writer.toString());
         checkReader(array, jsonReader);
         
         
-        array = new JSONLite.JSONValue [] {
-            new JSONLite.JSONValue("Abc")
+        array = new JSONValue [] {
+            new JSONValue("Abc")
         };
         writer.getBuffer().delete(0, writer.getBuffer().length());
         jsonWriter.writeJSONArray(array);
@@ -307,13 +312,13 @@ public class JSONLiteTest {
         System.out.println(writer.toString());
         assertEquals("[\"Abc\"]", writer.toString());
         
-        jsonReader = new JSONLite.JSONReader(writer.toString());
+        jsonReader = new JSONReader(writer.toString());
         checkReader(array, jsonReader);
 
         
-        array = new JSONLite.JSONValue[] {
-            new JSONLite.JSONValue("Abc"),
-            new JSONLite.JSONValue(123),
+        array = new JSONValue[] {
+            new JSONValue("Abc"),
+            new JSONValue(123),
         };
 
         writer.getBuffer().delete(0, writer.getBuffer().length());
@@ -322,17 +327,17 @@ public class JSONLiteTest {
         System.out.println(writer.toString());
         assertEquals("[\"Abc\",123]", writer.toString());
         
-        jsonReader = new JSONLite.JSONReader(writer.toString());
+        jsonReader = new JSONReader(writer.toString());
         checkReader(array, jsonReader);
         
 
-        JSONLite.JSONObject object = JSONLite.newJSONObject();
+        JSONObject object = JSONLite.newJSONObject();
         object.add("Def", -123);
         
-        array = new JSONLite.JSONValue[] {
-            new JSONLite.JSONValue("Abc"),
-            new JSONLite.JSONValue(object),
-            new JSONLite.JSONValue(123),
+        array = new JSONValue[] {
+            new JSONValue("Abc"),
+            new JSONValue(object),
+            new JSONValue(123),
         };
 
         writer.getBuffer().delete(0, writer.getBuffer().length());
@@ -341,18 +346,18 @@ public class JSONLiteTest {
         System.out.println(writer.toString());
         assertEquals("[\"Abc\",{\"Def\":-123},123]", writer.toString());
         
-        jsonReader = new JSONLite.JSONReader(writer.toString());
+        jsonReader = new JSONReader(writer.toString());
         checkReader(array, jsonReader);
         
         
         jsonWriter.setIndentAmount(2);
         
-        object.add("Ghi", new JSONLite.JSONValue [] { new JSONLite.JSONValue(true), new JSONLite.JSONValue() });
+        object.add("Ghi", new JSONValue [] { new JSONValue(true), new JSONValue() });
         
-        array = new JSONLite.JSONValue[] {
-            new JSONLite.JSONValue("Abc"),
-            new JSONLite.JSONValue(object),
-            new JSONLite.JSONValue(123),
+        array = new JSONValue[] {
+            new JSONValue("Abc"),
+            new JSONValue(object),
+            new JSONValue(123),
         };
 
         writer.getBuffer().delete(0, writer.getBuffer().length());
@@ -371,7 +376,7 @@ public class JSONLiteTest {
                 + "  123\n"
                 + "]", writer.toString());
         
-        jsonReader = new JSONLite.JSONReader(writer.toString());
+        jsonReader = new JSONReader(writer.toString());
         checkReader(array, jsonReader);
     }
 

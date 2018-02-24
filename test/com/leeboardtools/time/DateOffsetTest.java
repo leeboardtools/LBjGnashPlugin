@@ -15,6 +15,7 @@
  */
 package com.leeboardtools.time;
 
+import com.leeboardtools.json.JSONObject;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.Month;
@@ -278,4 +279,74 @@ public class DateOffsetTest {
         assertEquals(LocalDate.of(2017, 2, 1), DateOffset.START_OF_LAST_MONTH.getOffsetDate(date));
     }
     
+    
+    @Test 
+    public void testBasicEquals() {
+        DateOffset.Basic dateOffsetA = new DateOffset.Basic(DateOffset.Interval.WEEK, 5, DateOffset.IntervalRelation.LAST_DAY);
+        DateOffset.Basic dateOffsetB = new DateOffset.Basic(DateOffset.Interval.WEEK, 5, DateOffset.IntervalRelation.LAST_DAY);
+        
+        assertEquals(dateOffsetA, dateOffsetB);
+        
+        dateOffsetB = new DateOffset.Basic(DateOffset.Interval.WEEK, 5, DateOffset.IntervalRelation.FIRST_DAY);
+        assertNotEquals(dateOffsetA, dateOffsetB);
+        
+        
+        dateOffsetA = new DateOffset.Basic(DateOffset.Interval.WEEK, 5, DateOffset.IntervalRelation.LAST_DAY,
+            new DateOffset.DayOffset(10), DayOfWeek.SATURDAY);
+        dateOffsetB = new DateOffset.Basic(DateOffset.Interval.WEEK, 5, DateOffset.IntervalRelation.LAST_DAY,
+            new DateOffset.DayOffset(10), DayOfWeek.SATURDAY);
+        assertEquals(dateOffsetA, dateOffsetB);
+        
+        dateOffsetB = new DateOffset.Basic(DateOffset.Interval.WEEK, 5, DateOffset.IntervalRelation.LAST_DAY,
+            new DateOffset.DayOffset(11), DayOfWeek.SATURDAY);
+        assertNotEquals(dateOffsetA, dateOffsetB);
+        
+        
+        dateOffsetA = new DateOffset.Basic(DateOffset.Interval.WEEK, 5, DateOffset.IntervalRelation.LAST_DAY,
+            new DateOffset.NthDayOfWeekOffset(DayOfWeek.FRIDAY, 2), DayOfWeek.SATURDAY);
+        dateOffsetB = new DateOffset.Basic(DateOffset.Interval.WEEK, 5, DateOffset.IntervalRelation.LAST_DAY,
+            new DateOffset.NthDayOfWeekOffset(DayOfWeek.FRIDAY, 2), DayOfWeek.SATURDAY);
+        assertEquals(dateOffsetA, dateOffsetB);
+        
+        dateOffsetB = new DateOffset.Basic(DateOffset.Interval.WEEK, 5, DateOffset.IntervalRelation.LAST_DAY,
+            new DateOffset.NthDayOfWeekOffset(DayOfWeek.FRIDAY, 2), DayOfWeek.SUNDAY);
+        assertNotEquals(dateOffsetA, dateOffsetB);
+
+        dateOffsetB = new DateOffset.Basic(DateOffset.Interval.WEEK, 5, DateOffset.IntervalRelation.LAST_DAY,
+            new DateOffset.NthDayOfWeekOffset(DayOfWeek.FRIDAY, 1), DayOfWeek.SATURDAY);
+        assertNotEquals(dateOffsetA, dateOffsetB);
+
+    }
+    
+    
+    @Test
+    public void testJSON() {
+        DateOffset.Basic refDateOffset;
+        JSONObject jsonObject;
+        DateOffset.Basic testDateOffset;
+        
+        refDateOffset = new DateOffset.Basic(DateOffset.Interval.MONTH, 10, DateOffset.IntervalRelation.CURRENT_DAY);
+        jsonObject = DateOffset.toJSONObject(refDateOffset);
+        testDateOffset = DateOffset.basicFromJSON(jsonObject);
+        
+        assertEquals(refDateOffset, testDateOffset);
+        
+        
+        // Test DateOffset
+        refDateOffset = new DateOffset.Basic(DateOffset.Interval.WEEK, 5, DateOffset.IntervalRelation.LAST_DAY,
+            new DateOffset.DayOffset(10), DayOfWeek.SATURDAY);
+        jsonObject = DateOffset.toJSONObject(refDateOffset);
+        testDateOffset = DateOffset.basicFromJSON(jsonObject);
+        
+        assertEquals(refDateOffset, testDateOffset);
+        
+        
+        // Test NthDayOfWeekOffset...
+        refDateOffset = new DateOffset.Basic(DateOffset.Interval.WEEK, 5, DateOffset.IntervalRelation.LAST_DAY,
+            new DateOffset.NthDayOfWeekOffset(DayOfWeek.FRIDAY, 2), DayOfWeek.SATURDAY);
+        jsonObject = DateOffset.toJSONObject(refDateOffset);
+        testDateOffset = DateOffset.basicFromJSON(jsonObject);
+        
+        assertEquals(refDateOffset, testDateOffset);
+    }
 }

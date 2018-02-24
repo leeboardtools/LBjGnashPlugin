@@ -15,12 +15,14 @@
  */
 package com.leeboardtools.time;
 
-import com.leeboardtools.util.ArrayUtil;
 import com.leeboardtools.util.EnumStringConverter;
-import com.leeboardtools.util.ResourceSource;
+import com.leeboardtools.json.InvalidContentException;
+import com.leeboardtools.json.JSONLite;
+import com.leeboardtools.json.JSONObject;
+import com.leeboardtools.json.JSONValue;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
-import javafx.util.StringConverter;
+import java.util.Objects;
 
 /**
  * Interface for defining a date offset, the offset is applied by the interface
@@ -137,7 +139,7 @@ public interface DateOffset {
      * Determines which where in the interval to work from. Note that for {@link #LAST_DAY},
      * positive offsets go back in time.
      */
-    enum IntervalRelation {
+    public static enum IntervalRelation {
         /**
          * The interval offset is applied to the first day of the interval.
          */
@@ -227,6 +229,31 @@ public interface DateOffset {
         public LocalDate getReverseOffsetDate(LocalDate refDate) {
             return refDate.minusDays(dayCount);
         }
+
+        @Override
+        public int hashCode() {
+            int hash = 3;
+            hash = 59 * hash + this.dayCount;
+            return hash;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) {
+                return true;
+            }
+            if (obj == null) {
+                return false;
+            }
+            if (getClass() != obj.getClass()) {
+                return false;
+            }
+            final DayOffset other = (DayOffset) obj;
+            if (this.dayCount != other.dayCount) {
+                return false;
+            }
+            return true;
+        }
     }
     
     /**
@@ -291,6 +318,35 @@ public interface DateOffset {
         public LocalDate getReverseOffsetDate(LocalDate refDate) {
             LocalDate date = DateUtil.getClosestDayOfWeekOnOrBefore(refDate, dayOfWeek);
             return date.minusWeeks(occurrence - 1);
+        }
+
+        @Override
+        public int hashCode() {
+            int hash = 7;
+            hash = 53 * hash + Objects.hashCode(this.dayOfWeek);
+            hash = 53 * hash + this.occurrence;
+            return hash;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) {
+                return true;
+            }
+            if (obj == null) {
+                return false;
+            }
+            if (getClass() != obj.getClass()) {
+                return false;
+            }
+            final NthDayOfWeekOffset other = (NthDayOfWeekOffset) obj;
+            if (this.occurrence != other.occurrence) {
+                return false;
+            }
+            if (this.dayOfWeek != other.dayOfWeek) {
+                return false;
+            }
+            return true;
         }
     }
 
@@ -507,9 +563,190 @@ public interface DateOffset {
             
             return offsetDate;
         }
+
+        @Override
+        public int hashCode() {
+            int hash = 5;
+            hash = 17 * hash + Objects.hashCode(this.interval);
+            hash = 17 * hash + this.intervalOffset;
+            hash = 17 * hash + Objects.hashCode(this.intervalRelation);
+            hash = 17 * hash + Objects.hashCode(this.subIntervalOffset);
+            hash = 17 * hash + Objects.hashCode(this.startOfWeek);
+            return hash;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) {
+                return true;
+            }
+            if (obj == null) {
+                return false;
+            }
+            if (getClass() != obj.getClass()) {
+                return false;
+            }
+            final Basic other = (Basic) obj;
+            if (this.intervalOffset != other.intervalOffset) {
+                return false;
+            }
+            if (this.interval != other.interval) {
+                return false;
+            }
+            if (this.intervalRelation != other.intervalRelation) {
+                return false;
+            }
+            if (!Objects.equals(this.subIntervalOffset, other.subIntervalOffset)) {
+                return false;
+            }
+            if (this.startOfWeek != other.startOfWeek) {
+                return false;
+            }
+            return true;
+        }
     
     }
     
     
+    /**
+     * Creates a {@link JSONObject} representing a {@link SubIntervalOffset} object.
+     * @param offset    The offset object, may be <code>null</code>
+     * @return The JSON object, <code>null</code> if offset is <code>null</code>
+     */
+    public static JSONObject toJSONObject(SubIntervalOffset offset) {
+        if (offset == null) {
+            return null;
+        }
+
+        JSONObject object = JSONLite.newJSONObject();
+        object.add(JSONLite.NAME_CLASS_NAME, offset.getClass().getCanonicalName());
+
+        if (offset instanceof DayOffset) {
+            DayOffset dayOffset = (DayOffset)offset;
+            object.add("dayCount", dayOffset.getDayCount());
+
+        }
+        else if (offset instanceof NthDayOfWeekOffset) {
+            NthDayOfWeekOffset dayOfWeekOffset = (NthDayOfWeekOffset)offset;
+            object.add("dayOfWeek", dayOfWeekOffset.getDayOfWeek());
+            object.add("occurrence", dayOfWeekOffset.getOccurrence());
+
+        }
+        else {
+            throw new UnsupportedOperationException("The SubIntervalOffset class '" + offset.getClass().getCanonicalName() + "' is not supported.");
+        }
+        
+        return object;
+    }
+    
+    /**
+     * Creates a {@link SubIntervalOffset} from a {@link JSONObject}.
+     * @param object    The JSON object to process.
+     * @return The sub interval offset object.
+     */
+    public static SubIntervalOffset subIntervalOffsetFromJSON(JSONObject object) {
+        if (object == null) {
+            return null;
+        }
+        
+        String className = object.getValue(JSONLite.NAME_CLASS_NAME).getStringValue();
+        if (DayOffset.class.getCanonicalName().equals(className)) {
+            int dayCount = object.getValue("dayCount").getIntValue();
+            return new DayOffset(dayCount);
+        }
+        else if (NthDayOfWeekOffset.class.getCanonicalName().equals(className)) {
+            DayOfWeek dayOfWeek = object.getValue("dayOfWeek").getEnumValue(DayOfWeek.values());
+            int occurrence = object.getValue("occurrence").getIntValue();
+            return new NthDayOfWeekOffset(dayOfWeek, occurrence);
+        }
+        else {
+            throw new InvalidContentException("The class name '" + className + "' is not supported.");
+        }
+    }
+    
+    /**
+     * Creates a {@link SubIntervalOffset} from a {@link JSONValue}.
+     * @param value    The JSON value to process.
+     * @return The sub interval offset object.
+     */
+    public static SubIntervalOffset subIntervalOffsetFromJSON(JSONValue value) {
+        if (value.isNull()) {
+            return null;
+        }
+        return subIntervalOffsetFromJSON(value.getObjectValue());
+    }
+    
+    
+    /**
+     * Creates a {@link JSONObject} representing a {@link DateOffset} date offset.
+     * Currently only {@link Basic} date offset objects are supported.
+     * @param dateOffset    The date offset, may be <code>null</code>, 
+     * @return The JSON object, <code>null</code> if dateOffset is <code>null</code>.
+     */
+    public static JSONObject toJSONObject(DateOffset dateOffset) {
+        if (dateOffset == null) {
+            return null;
+        }
+        
+        if (!(dateOffset instanceof Basic)) {
+            throw new UnsupportedOperationException("The DateOffset class '" + dateOffset.getClass().getCanonicalName() + "' is not supported.");
+        }
+        return toJSONObject((Basic)dateOffset);
+    }
+    
+    
+    /**
+     * Creates a {@link JSONObject} representing a {@link Basic} date offset.
+     * @param dateOffset    The date offset, may be <code>null</code>, 
+     * @return The JSON object, <code>null</code> if dateOffset is <code>null</code>.
+     */
+    public static JSONObject toJSONObject(Basic dateOffset) {
+        if (dateOffset == null) {
+            return null;
+        }
+        
+        JSONObject object = JSONLite.newJSONObject();
+        object.add(JSONLite.NAME_CLASS_NAME, dateOffset.getClass().getCanonicalName());
+        object.add("interval", dateOffset.getInterval());
+        object.add("intervalOffset", dateOffset.getIntervalOffset());
+        object.add("intervalRelation", dateOffset.getIntervalRelation());
+        object.add("subIntervalOffset", toJSONObject(dateOffset.getSubIntervalOffset()));
+        object.add("startOfWeek", dateOffset.getStartOfWeek());
+        
+        return object;
+    }
+    
+    /**
+     * Creates a {@link Basic} date offset from a {@link JSONObject}.
+     * @param object    The JSON object to interpret.
+     * @return The date offset, <code>null</code> if object is <code>null</code>.
+     */
+    public static Basic basicFromJSON(JSONObject object) {
+        if (object == null) {
+            return null;
+        }
+        
+        String className = object.getValue(JSONLite.NAME_CLASS_NAME).getStringValue();
+        if (!Basic.class.getCanonicalName().equals(className)) {
+            throw new InvalidContentException("Could not read the date offset. Expected a '_className' name with a value of '" + Basic.class.getCanonicalName() + "'.");
+        }
+        
+        Interval interval = object.getValue("interval").getEnumValue(Interval.values());
+        int intervalOffset = object.getValue("intervalOffset").getIntValue();
+        IntervalRelation intervalRelation = object.getValue("intervalRelation").getEnumValue(IntervalRelation.values());
+        SubIntervalOffset subIntervalOffset = subIntervalOffsetFromJSON(object.getValue("subIntervalOffset"));
+        DayOfWeek startOfWeek = object.getValue("startOfWeek").getEnumValue(DayOfWeek.values());
+        
+        return new Basic(interval, intervalOffset, intervalRelation, subIntervalOffset, startOfWeek);
+    }
+    
+    /**
+     * Creates a {@link Basic} date offset from a {@link JSONValue}.
+     * @param value    The JSON value to interpret.
+     * @return The date offset, <code>null</code> if value is <code>null</code>.
+     */
+    public static Basic basicFromJSON(JSONValue value) {
+        return basicFromJSON(value.getObjectValue());
+    }
     
 }

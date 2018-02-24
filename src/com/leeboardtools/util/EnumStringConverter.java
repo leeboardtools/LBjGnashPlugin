@@ -21,6 +21,7 @@ import javafx.util.StringConverter;
  * An abstract class for implementing a string converter for {@link Enum}s. For a typical
  * implementation see {@link DateOffset#INTERVAL_STRING_CONVERTER}.
  * @author Albert Santos
+ * @param <T>   The enum's type.
  */
 public abstract class EnumStringConverter <T extends Enum> extends StringConverter<T> {
     private String [] text;

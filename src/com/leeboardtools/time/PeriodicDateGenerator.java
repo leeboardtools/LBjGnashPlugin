@@ -15,6 +15,9 @@
  */
 package com.leeboardtools.time;
 
+import com.leeboardtools.json.JSONLite;
+import com.leeboardtools.json.JSONObject;
+import com.leeboardtools.json.JSONValue;
 import java.time.LocalDate;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
@@ -266,4 +269,51 @@ public class PeriodicDateGenerator {
     }
     
     
+    /**
+     * Creates a {@link JSONObject} representing a {@link PeriodicDateGenerator} object.
+     * @param generator The generator, may be <code>null</code>.
+     * @return The JSON object, <code>null</code> if generator is <code>null</code>.
+     */
+    public static JSONObject toJSONObject(PeriodicDateGenerator generator) {
+        if (generator == null) {
+            return null;
+        }
+        
+        JSONObject jsonObject = JSONLite.newJSONObject();
+        jsonObject.add(JSONLite.NAME_CLASS_NAME, PeriodicDateGenerator.class.getCanonicalName());
+        jsonObject.add("startDateOffset", DateOffset.toJSONObject(generator.getStartDateOffset()));
+        jsonObject.add("periodDateOffset", DateOffset.toJSONObject(generator.getPeriodDateOffset()));
+        jsonObject.add("periodCount", generator.getPeriodCount());
+        jsonObject.add("endDateOffset", DateOffset.toJSONObject(generator.getEndDateOffset()));
+
+        return jsonObject;
+    }
+    
+    /**
+     * Creates a {@link PeriodicDateGenerator} from a {@link JSONObject}.
+     * @param object    The JSON object.
+     * @return The periodic date generator, <code>null</code> if object is <code>null</code>.
+     */
+    public static PeriodicDateGenerator fromJSONObject(JSONObject object) {
+        if (object == null) {
+            return null;
+        }
+        
+        DateOffset.Basic startDateOffset = DateOffset.basicFromJSON(object.getValue("startDateOffset"));
+        DateOffset.Basic periodDateOffset = DateOffset.basicFromJSON(object.getValue("periodDateOffset"));
+        int periodCount = object.getValue("periodCount").getIntValue();
+        DateOffset.Basic endDateOffset = DateOffset.basicFromJSON(object.getValue("endDateOffset"));
+        
+        return new PeriodicDateGenerator(startDateOffset, periodDateOffset, periodCount, endDateOffset);
+    }
+    
+    
+    /**
+     * Creates a {@link PeriodicDateGenerator} from a {@link JSONValue}.
+     * @param value    The JSON value.
+     * @return The periodic date generator, <code>null</code> if value is <code>null</code>.
+     */
+    public static PeriodicDateGenerator fromJSONObject(JSONValue value) {
+        return fromJSONObject(value.getObjectValue());
+    }
 }
