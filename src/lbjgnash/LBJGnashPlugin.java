@@ -17,6 +17,7 @@ import jgnash.plugin.FxPlugin;
 import jgnash.uifx.views.main.MainView;
 import lbjgnash.ui.ReportDefinition;
 import lbjgnash.ui.ReportDesignerWindow;
+import lbjgnash.ui.ReportManagerView;
 import lbjgnash.ui.ReportSetupView;
 
 /**
@@ -82,7 +83,8 @@ public class LBJGnashPlugin implements FxPlugin {
         if (engine != null) {
             //ReportDesignerWindow.showReportDesignerWindow(engine, null);
             //ReportDefinition definition = ReportDefinition.standardNetWorthDefintion();
-            ReportSetupView.showAndWait("Test Report", reportDefinition, engine, MainView.getPrimaryStage());
+            //ReportSetupView.showAndWait("Test Report", reportDefinition, engine, MainView.getPrimaryStage());
+            ReportManagerView.showAndWait(engine, MainView.getPrimaryStage());
         }
     }
 }

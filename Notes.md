@@ -2,6 +2,21 @@
 - Add ability to filter on Account notes (want to be able to add say 'real-estate' as a note,
 and then exclude accounts with notes that contain 'real-estate'.
 
+
+# Streaming:
+Just store individual reports in the main jGnash folder.
+File extension lbjgnashreport
+Menu will:
+    - list available reports.
+    - New report... -> New File Chooser -> Report Editor.
+    - Edit report... -> Open File Chooser -> Report Editor.
+    - Delete report... -> Open File Chooser -> Confirm Delete.
+    - Or just Manage Reports...
+        Dialog box,
+            displays list of existing reports.
+            buttons for Open, New, Edit, Delete.
+
+
 # LeeboardTools jGnash Plugin Design Notes
 ## Summary Report
     Overall summary of the accounts. Major items are:
