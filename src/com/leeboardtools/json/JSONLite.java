@@ -324,10 +324,53 @@ public class JSONLite {
         stringBuilder.append('"');
         return stringBuilder.toString();
     }
-        
+    
+    
     
     /**
-     * A JSONObject name that can be used to identify the class name associated with the object..
+     * Helper that generates a JSON array from the items in a collection. A converter callback
+     * is required to convert the individual items to a JSON value.
+     * @param <T>   The collection item type.
+     * @param collection    The collection to be converted.
+     * @param converter The converter callback.
+     * @return The JSON value, <code>null</code> if collection is <code>null</code>.
      */
-    public static final String NAME_CLASS_NAME = "_className";
+    public static <T> JSONValue toJSONValue(Collection<T> collection, Callback<T, JSONValue> converter) {
+        if (collection == null) {
+            return null;
+        }
+        
+        JSONValue [] jsonArray = new JSONValue [collection.size()];
+        int index = 0;
+        for (T item : collection) {
+            jsonArray[index] = converter.call(item);
+            ++index;
+        }
+        
+        return new JSONValue(jsonArray);
+    }
+    
+    
+    /**
+     * Populates a collection from the values in a JSON array. A converter callback is used
+     * to convert the individual JSON values into the collection items.
+     * @param <T>   The collection item type.
+     * @param jsonValue The JSON value to be converted.
+     * @param collection    The collection to be populated, it is cleared on entry.
+     * @param converter The converter callback.
+     */
+    public static <T> void fillFromJSONValue(JSONValue jsonValue, Collection<T> collection, Callback<JSONValue, T> converter) {
+        collection.clear();
+        
+        if (jsonValue == null) {
+            return;
+        }
+        
+        JSONValue [] jsonArray = jsonValue.getArrayValue();
+        if (jsonArray != null) {
+            for (JSONValue value : jsonArray) {
+                collection.add(converter.call(value));
+            }
+        }
+    }
 }

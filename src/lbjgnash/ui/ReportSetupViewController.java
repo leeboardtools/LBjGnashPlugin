@@ -88,6 +88,19 @@ public class ReportSetupViewController implements Initializable {
     @FXML
     private ListView<ReportDefinition.ColumnType> usedColumnsListView;
     
+    
+    public static enum CloseReason {
+        OK,
+        CANCEL,
+    }
+    
+    private CloseReason closeReason = null;
+    
+    public final CloseReason getCloseReason() {
+        return closeReason;
+    }
+    
+    
     /**
      * Initializes the controller class.
      */
@@ -159,6 +172,9 @@ public class ReportSetupViewController implements Initializable {
         this.reportStyleChoice.setValue(definition.getStyle());
         
         PeriodicDateGenerator dateGenerator = this.definition.getDateGenerator();
+        if (dateGenerator == null) {
+            dateGenerator = new PeriodicDateGenerator(DateOffset.SAME_DAY, DateOffset.END_OF_LAST_YEAR, 0);
+        }
         this.periodicDateController.setupController(dateGenerator, stage);
         
         DateOffset.Basic rangeOffset = this.definition.getRangeDateOffset();
@@ -180,6 +196,8 @@ public class ReportSetupViewController implements Initializable {
         this.usedColumnsListView.getItems().addAll(definition.getColumnTypes());
         
         updateColumnButtons();
+        
+        this.closeReason = null;
     }
 
     @FXML
@@ -212,11 +230,13 @@ public class ReportSetupViewController implements Initializable {
             this.definition.getColumnTypes().clear();
             this.definition.getColumnTypes().addAll(this.usedColumnsListView.getItems());
         }
+        this.closeReason = CloseReason.OK;
         this.stage.close();
     }
 
     @FXML
     private void onCancel(ActionEvent event) {
+        this.closeReason = CloseReason.CANCEL;
         this.stage.close();
     }
 

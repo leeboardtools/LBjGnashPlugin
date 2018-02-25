@@ -15,6 +15,9 @@
  */
 package lbjgnash.ui;
 
+import com.leeboardtools.json.JSONLite;
+import com.leeboardtools.json.JSONObject;
+import com.leeboardtools.json.JSONValue;
 import com.leeboardtools.time.DateOffset;
 import com.leeboardtools.time.PeriodicDateGenerator;
 import com.leeboardtools.util.CompositeObservable;
@@ -215,6 +218,10 @@ public class ReportDefinition extends CompositeObservable {
     
     
     public static ReportDefinition fromStyle(Style standard) {
+        if (standard == null) {
+            return new ReportDefinition();
+        }
+        
         switch (standard) {
             case NET_WORTH :
                 return standardNetWorthDefintion();
@@ -226,7 +233,7 @@ public class ReportDefinition extends CompositeObservable {
                 return standardPortfolioDefinition();
                 
             default :
-                return null;
+                return new ReportDefinition();
         }
     }
     
@@ -266,5 +273,56 @@ public class ReportDefinition extends CompositeObservable {
         definition.getAccountFilter().getAccountGroupsToInclude().add(AccountGroup.INVEST);
         
         return definition;
+    }
+    
+    
+    public static JSONObject toJSONObject(ReportDefinition definition) {
+        if (definition == null) {
+            return null;
+        }
+        
+        JSONObject jsonObject = JSONLite.newJSONObject();
+        jsonObject.putClassName(ReportDefinition.class);
+        jsonObject.add("title", definition.getTitle());
+        jsonObject.add("style", definition.getStyle());
+        jsonObject.add("dateGenerator", PeriodicDateGenerator.toJSONObject(definition.getDateGenerator()));
+        jsonObject.add("rangeDateOffset", DateOffset.toJSONObject(definition.getRangeDateOffset()));
+        jsonObject.add("accountFilter", AccountFilter.toJSONObject(definition.getAccountFilter()));
+        jsonObject.add("columnTypes", JSONLite.toJSONValue(definition.getColumnTypes(), (item) -> {
+            return new JSONValue(item);
+        }));
+        return jsonObject;
+    }
+    
+    public static ReportDefinition fromJSON(JSONObject jsonObject) {
+        if (jsonObject == null) {
+            return null;
+        }
+        
+        jsonObject.verifyClass(ReportDefinition.class);
+        
+        ReportDefinition definition = new ReportDefinition();
+        jsonObject.callIfValue("title", (jsonValue) -> { definition.setTitle(jsonValue.getStringValue()); });
+        jsonObject.callIfValue("style", (jsonValue) -> { definition.setStyle(jsonValue.getEnumValue(Style.values())); });
+        jsonObject.callIfValue("dateGenerator", (jsonValue) -> { definition.setDateGenerator(PeriodicDateGenerator.fromJSON(jsonValue)); });
+        jsonObject.callIfValue("rangeDateOffset", (jsonValue) -> { definition.setRangeDateOffset(DateOffset.basicFromJSON(jsonValue)); });
+        
+        AccountFilter filter = AccountFilter.fromJSON(jsonObject.getValue("accountFilter"));
+        if (filter != null) {
+            definition.getAccountFilter().copyFrom(filter);
+        }
+        
+        JSONLite.fillFromJSONValue(jsonObject.getValue("columnTypes"), definition.getColumnTypes(), (jsonValue) -> {
+            return jsonValue.getEnumValue(ColumnType.values());
+        });
+        
+        return definition;
+    }
+    
+    public static ReportDefinition fromJSON(JSONValue jsonValue) {
+        if (jsonValue == null) {
+            return null;
+        }
+        return fromJSON(jsonValue.getObjectValue());
     }
 }

@@ -154,7 +154,7 @@ public class PeriodicDateGeneratorTest {
 
         refGenerator = new PeriodicDateGenerator(startDateOffset, periodDateOffset, endDateOffset);
         jsonObject = PeriodicDateGenerator.toJSONObject(refGenerator);
-        testGenerator = PeriodicDateGenerator.fromJSONObject(jsonObject);
+        testGenerator = PeriodicDateGenerator.fromJSON(jsonObject);
         
         assertEquals(refGenerator, testGenerator);
         
@@ -165,7 +165,7 @@ public class PeriodicDateGeneratorTest {
 
         refGenerator = new PeriodicDateGenerator(startDateOffset, periodDateOffset, 5, endDateOffset);
         jsonObject = PeriodicDateGenerator.toJSONObject(refGenerator);
-        testGenerator = PeriodicDateGenerator.fromJSONObject(jsonObject);
+        testGenerator = PeriodicDateGenerator.fromJSON(jsonObject);
         
         assertEquals(refGenerator, testGenerator);
     }

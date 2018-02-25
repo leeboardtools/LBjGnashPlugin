@@ -29,12 +29,15 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Control;
 import javafx.scene.control.Label;
+import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
+import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.Window;
+import javafx.util.Callback;
 
 /**
  * This is a generic dialog box that offers a list of options to choose from as
@@ -74,6 +77,8 @@ public class PromptDialog {
     
     public static final String STYLE_MESSAGE = "prompt-message";
     public static final String STYLE_BUTTON = "prompt-button";
+    public static final String STYLE_TEXT_INPUT_LABEL = "label-text-input";
+    public static final String STYLE_TEXT_INPUT_EDIT = "edit-tex-input";
     
     private int defaultButtonId = INVALID_BUTTON_ID;
     private int cancelButtonId = INVALID_BUTTON_ID;
@@ -82,9 +87,30 @@ public class PromptDialog {
     
     private final List<String> messageEntries = new ArrayList<>();
     
+    private static class TextInputEntry {
+        final String label;
+        final String id;
+        String initialText;
+        String promptText;
+        boolean isTextRequired;
+        TextField textField;
+        
+        TextInputEntry(String label, String id, String initialText, String promptText, boolean isTextRequired) {
+            this.label = label;
+            this.id = id;
+            this.initialText = initialText;
+            this.promptText = promptText;
+            this.isTextRequired = isTextRequired;
+        }
+    }
+    
+    private final List<TextInputEntry> textInputEntries = new ArrayList<>();
+    
+    
     private static class ButtonEntry {
         final String text;
         final int id;
+        Button button;
         
         ButtonEntry(String text, int id) {
             this.text = text;
@@ -92,6 +118,8 @@ public class PromptDialog {
         }
     }
     private final List<ButtonEntry> buttonEntries = new ArrayList<>();
+    
+    private Callback<Integer, Boolean> buttonCloseCallback;
     
     private int chosenButtonId = INVALID_BUTTON_ID;
     private Stage stage;
@@ -127,6 +155,22 @@ public class PromptDialog {
         this.messageEntries.add(text);
     }
     
+    public void addTextInput(String label, String id, String initialText, String promptText, boolean textRequired) {
+        this.textInputEntries.add(new TextInputEntry(label, id, initialText, promptText, textRequired));
+    }
+    
+    public String getTextInputText(String id) {
+        for (TextInputEntry entry : this.textInputEntries) {
+            if (entry.id.equals(id)) {
+                if (entry.textField != null) {
+                    return entry.textField.getText();
+                }
+                return null;
+            }
+        }
+        return null;
+    }
+    
     /**
      * Adds a button. The button appears below any previously added buttons.
      * @param buttonText    The text for the button.
@@ -154,9 +198,22 @@ public class PromptDialog {
     }
     
     
+    /**
+     * Installs an optional callback that gets called when a button is chosen, prior
+     * to the dialog being closed to allow validation. The callback should return
+     * <code>false</code> if the dialog box should not be closed.
+     * @param callback The callback, may be <code>null</code>.
+     */
+    public void setButtonCloseCallback(Callback<Integer, Boolean> callback) {
+        this.buttonCloseCallback = callback;
+    }
+    
+    
     protected void setupRoot(Parent root) {
         setupMessages(root);
+        setupTextInputEntries(root);
         setupButtons(root);
+        updateButtons();
     }
     
     protected void setupMessages(Parent root) {
@@ -176,11 +233,71 @@ public class PromptDialog {
         }
     }
     
+    protected void updateButtons() {
+        boolean isDefaultDisabled = false;
+        
+        for (TextInputEntry entry : this.textInputEntries) {
+            if (entry.isTextRequired) {
+                String text = null;
+                if (entry.textField != null) {
+                    text = entry.textField.getText();
+                }
+                if (text != null) {
+                    text = text.trim();
+                }
+                if ((text == null) || text.isEmpty()) {
+                    isDefaultDisabled = true;
+                    break;
+                }
+            }
+        }
+        
+        for (ButtonEntry entry : this.buttonEntries) {
+            if (entry.id == this.defaultButtonId) {
+                entry.button.setDisable(isDefaultDisabled);
+            }
+        }
+    }
+    
+    protected void setupTextInputEntries(Parent root) {
+        Node node = FxUtil.getChildWithId(root, "promptContainer");
+        if (node instanceof VBox) {
+            VBox vBox = (VBox)node;
+            
+            for (int i = 0; i < this.textInputEntries.size(); ++i) {
+                TextInputEntry textInputEntry = this.textInputEntries.get(i);
+                Label label = new Label(textInputEntry.label);
+                label.setWrapText(true);
+                label.setMaxWidth(Double.MAX_VALUE);
+                label.getStyleClass().add(STYLE_TEXT_INPUT_LABEL);
+                
+                vBox.getChildren().add(label);
+                
+                TextField edit = new TextField(textInputEntry.initialText);
+                if (textInputEntry.promptText != null) {
+                    edit.setPromptText(textInputEntry.promptText);
+                }
+                
+                if (textInputEntry.isTextRequired) {
+                    edit.textProperty().addListener((prop, oldValue, newValue) -> {
+                        updateButtons();
+                    });
+                }
+                
+                edit.setMaxWidth(Double.MAX_VALUE);
+                edit.getStyleClass().add(STYLE_TEXT_INPUT_EDIT);
+                
+                textInputEntry.textField = edit;
+
+                vBox.getChildren().add(edit);
+            }
+        }
+    }
+    
     protected void setupButtons(Parent root) {
         Node node = FxUtil.getChildWithId(root, "buttonContainer");
         if (node instanceof VBox) {
             VBox vBox = (VBox)node;
-            vBox.getChildren().clear();
 
             for (int i = 0; i < this.buttonEntries.size(); ++i) {
                 ButtonEntry entry = this.buttonEntries.get(i);
@@ -195,9 +312,10 @@ public class PromptDialog {
                 button.getStyleClass().add(STYLE_BUTTON);
                 
                 button.setOnAction((e)-> {
-                    chosenButtonId = entry.id;
-                    stage.close();
+                    onButtonChosen(entry.id);
                 });
+                
+                entry.button = button;
                 
                 vBox.getChildren().add(button);
             }
@@ -215,19 +333,34 @@ public class PromptDialog {
                 if (entry.id == this.defaultButtonId) {
                     button.setDefaultButton(true);
                 }
-                button.setPrefWidth(60);
+                button.setPrefWidth(80);
                 button.setMaxWidth(Double.MAX_VALUE);
                 button.getStyleClass().add(STYLE_BUTTON);
                 
                 button.setOnAction((e)-> {
-                    chosenButtonId = entry.id;
-                    stage.close();
+                    onButtonChosen(entry.id);
                 });
                 
-                HBox.setHgrow(button, Priority.ALWAYS);
+                if (this.buttonEntries.size() > 1) {
+                //    HBox.setHgrow(button, Priority.ALWAYS);
+                }
+
+                entry.button = button;
+
                 hBox.getChildren().add(button);
             }
         }
+    }
+    
+    protected void onButtonChosen(int id) {
+        if (buttonCloseCallback != null) {
+            if (!buttonCloseCallback.call(id)) {
+                return;
+            }
+        }
+        
+        chosenButtonId = id;
+        stage.close();
     }
     
     protected void showRoot(Parent root, Window ownerWindow) {
@@ -254,6 +387,7 @@ public class PromptDialog {
             }
         }
         
+        this.stage.initModality(Modality.APPLICATION_MODAL);
         this.stage.initOwner(ownerWindow);
         this.stage.showAndWait();
     }
@@ -321,7 +455,7 @@ public class PromptDialog {
             dialog.setTitle(title);
         }
         dialog.addMessage(message);
-        dialog.addButton(ResourceSource.getString("LB.Button.ok"), BTN_OK);
+        dialog.addButton(ResourceSource.getString("LBDialog.OK"), BTN_OK);
         
         dialog.showSimpleDialog(ownerWindow);
     }
@@ -333,5 +467,37 @@ public class PromptDialog {
      */
     public static void showOKDialog(String message, String title) {
         showOKDialog(null, message, title);
+    }
+    
+
+    /**
+     * Helper that puts up a dialog box with an OK and a Cancel button.
+     * @param ownerWindow   The owner window, may be <code>null</code>
+     * @param message   The message to display.
+     * @param title If not <code>null</code> the title for the window.
+     * @return <code>true</code> if the OK button was chosen.
+     */
+    public static boolean showOKCancelDialog(Window ownerWindow, String message, String title) {
+        PromptDialog dialog = new PromptDialog();
+        if (title != null) {
+            dialog.setTitle(title);
+        }
+        dialog.addMessage(message);
+        dialog.addButton(ResourceSource.getString("LBDialog.OK"), BTN_OK);
+        dialog.setDefaultButtonId(BTN_OK);
+        dialog.addButton(ResourceSource.getString("LBDialog.Cancel"), BTN_CANCEL);
+        dialog.setCancelButtonId(BTN_CANCEL);
+        
+        return dialog.showSimpleDialog(ownerWindow) == BTN_OK;
+    }
+
+    /**
+     * Helper that puts up a dialog box with an OK and a Cancel button.
+     * @param message   The message to display.
+     * @param title If not <code>null</code> the title for the window.
+     * @return <code>true</code> if the OK button was chosen.
+     */
+    public static boolean showOKCancelDialog(String message, String title) {
+        return showOKCancelDialog(null, message, title);
     }
 }

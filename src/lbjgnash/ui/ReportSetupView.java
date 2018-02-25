@@ -23,6 +23,7 @@ import java.util.logging.Logger;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.stage.Modality;
 import javafx.stage.Stage;
 import jgnash.engine.Engine;
 
@@ -33,7 +34,7 @@ import jgnash.engine.Engine;
 public class ReportSetupView {
     public ReportSetupView() {}
     
-    public static void showAndWait(String reportName, ReportDefinition definition, Engine engine, Stage primaryStage) {
+    public static boolean showAndWait(String reportName, ReportDefinition definition, Engine engine, Stage primaryStage) {
         try {
             Stage stage = new Stage();
 
@@ -51,12 +52,15 @@ public class ReportSetupView {
                 stage.initOwner(primaryStage);
             }
             
+            stage.initModality(Modality.APPLICATION_MODAL);
             stage.setTitle(ResourceSource.getString("ReportSetupView.Title", reportName));
 
             stage.showAndWait();
+            return controller.getCloseReason() == ReportSetupViewController.CloseReason.OK;
             
         } catch (IOException ex) {
             Logger.getLogger(ReportSetupView.class.getName()).log(Level.SEVERE, null, ex);
+            return false;
         }
     }
 }

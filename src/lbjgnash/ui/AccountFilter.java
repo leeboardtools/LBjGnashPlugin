@@ -15,6 +15,9 @@
  */
 package lbjgnash.ui;
 
+import com.leeboardtools.json.JSONLite;
+import com.leeboardtools.json.JSONObject;
+import com.leeboardtools.json.JSONValue;
 import com.leeboardtools.util.CompositeObservable;
 import com.leeboardtools.util.SetUtil;
 import java.util.HashSet;
@@ -190,4 +193,78 @@ public class AccountFilter extends CompositeObservable {
         fireInvalidationListeners();
     }
     
+    
+    public static JSONObject toJSONObject(AccountFilter filter) {
+        if (filter == null) {
+            return null;
+        }
+        
+        JSONObject jsonObject = JSONLite.newJSONObject();
+        jsonObject.putClassName(AccountFilter.class);
+        
+        jsonObject.add("accountTypesToInclude", JSONLite.toJSONValue(filter.getAccountTypesToInclude(), (item) -> {
+            return new JSONValue(item);
+        }));
+        jsonObject.add("accountGroupsToInclude", JSONLite.toJSONValue(filter.getAccountGroupsToInclude(), (item) -> {
+            return new JSONValue(item);
+        }));
+        jsonObject.add("accountNamesToInclude", JSONLite.toJSONValue(filter.getAccountNamesToInclude(), (item) -> {
+            return new JSONValue(item);
+        }));
+        jsonObject.add("includeHiddenAccounts", filter.isIncludeHiddenAccounts());
+        
+        jsonObject.add("accountTypesToExclude", JSONLite.toJSONValue(filter.getAccountTypesToExclude(), (item) -> {
+            return new JSONValue(item);
+        }));
+        jsonObject.add("accountGroupsToExclude", JSONLite.toJSONValue(filter.getAccountGroupsToExclude(), (item) -> {
+            return new JSONValue(item);
+        }));
+        jsonObject.add("accountNamesToExclude", JSONLite.toJSONValue(filter.getAccountNamesToExclude(), (item) -> {
+            return new JSONValue(item);
+        }));
+        jsonObject.add("excludeVisibleAccounts", filter.isExcludeVisibleAccounts());
+
+        return jsonObject;
+    }
+    
+    public static AccountFilter fromJSON(JSONObject jsonObject) {
+        if (jsonObject == null) {
+            return null;
+        }
+        
+        jsonObject.verifyClass(AccountFilter.class);
+        
+        AccountFilter filter = new AccountFilter();
+        JSONLite.fillFromJSONValue(jsonObject.getValue("accountTypesToInclude"), filter.getAccountTypesToInclude(), (value) -> {
+            return value.getEnumValue(AccountType.values());
+        });
+        JSONLite.fillFromJSONValue(jsonObject.getValue("accountGroupsToInclude"), filter.getAccountGroupsToInclude(), (value) -> {
+            return value.getEnumValue(AccountGroup.values());
+        });
+        JSONLite.fillFromJSONValue(jsonObject.getValue("accountNamesToInclude"), filter.getAccountNamesToInclude(), (value) -> {
+            return value.getStringValue();
+        });
+        jsonObject.callIfValue("includeHiddenAccounts", (jsonValue) -> { filter.setIncludeHiddenAccounts(jsonValue.isTrue()); });
+        
+        
+        JSONLite.fillFromJSONValue(jsonObject.getValue("accountTypesToExclude"), filter.getAccountTypesToExclude(), (value) -> {
+            return value.getEnumValue(AccountType.values());
+        });
+        JSONLite.fillFromJSONValue(jsonObject.getValue("accountGroupsToExclude"), filter.getAccountGroupsToExclude(), (value) -> {
+            return value.getEnumValue(AccountGroup.values());
+        });
+        JSONLite.fillFromJSONValue(jsonObject.getValue("accountNamesToExclude"), filter.getAccountNamesToExclude(), (value) -> {
+            return value.getStringValue();
+        });
+        jsonObject.callIfValue("excludeVisibleAccounts", (jsonValue) -> { filter.setExcludeVisibleAccounts(jsonValue.isTrue()); });
+        
+        return filter;
+    }
+    
+    public static AccountFilter fromJSON(JSONValue jsonValue) {
+        if (jsonValue == null) {
+            return null;
+        }
+        return fromJSON(jsonValue.getObjectValue());
+    }
 }

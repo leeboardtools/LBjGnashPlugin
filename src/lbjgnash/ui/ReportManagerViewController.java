@@ -15,14 +15,30 @@
  */
 package lbjgnash.ui;
 
+import com.leeboardtools.dialog.PromptDialog;
+import com.leeboardtools.util.FileUtil;
+import com.leeboardtools.util.ResourceSource;
+import java.io.IOException;
 import java.net.URL;
+import java.nio.file.DirectoryStream;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ResourceBundle;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
+import javafx.geometry.Point2D;
 import javafx.scene.control.Button;
 import javafx.scene.control.ListView;
+import javafx.scene.control.TextInputDialog;
+import javafx.scene.control.cell.TextFieldListCell;
 import javafx.stage.Stage;
+import javafx.util.StringConverter;
 import jgnash.engine.Engine;
 
 /**
@@ -32,7 +48,7 @@ import jgnash.engine.Engine;
  */
 public class ReportManagerViewController implements Initializable {
     @FXML
-    private ListView<?> reportsListView;
+    private ListView<String> reportsListView;
     @FXML
     private Button openButton;
     @FXML
@@ -46,13 +62,13 @@ public class ReportManagerViewController implements Initializable {
 
     private Engine engine;
     private Stage stage;
+    
 
     /**
      * Initializes the controller class.
      */
     @Override
     public void initialize(URL url, ResourceBundle rb) {
-        // TODO
     }    
     
     
@@ -60,11 +76,15 @@ public class ReportManagerViewController implements Initializable {
         this.engine = engine;
         this.stage = stage;
         
-        loadReportDefinitions();
+        loadReportDefinitions(null);
     }
     
-    private void loadReportDefinitions() {
-        
+    private void loadReportDefinitions(String reportToSelect) {
+        reportsListView.getItems().clear();
+        reportsListView.getItems().addAll(ReportManager.getAvailableReportNames());
+        if (reportToSelect != null) {
+            reportsListView.getSelectionModel().select(reportToSelect);
+        }
     }
 
     @FXML
@@ -73,14 +93,100 @@ public class ReportManagerViewController implements Initializable {
 
     @FXML
     private void onEdit(ActionEvent event) {
+        String reportName = reportsListView.getSelectionModel().getSelectedItem();
+        if (reportName != null) {
+            ReportDefinition reportDefinition = ReportManager.getReportDefinition(reportName);
+            if (reportDefinition != null) {
+                ReportSetupView.showAndWait(reportName, reportDefinition, engine, stage);
+                ReportManager.saveReport(reportName);
+                loadReportDefinitions(reportName);
+            }
+        }
     }
 
     @FXML
     private void onNew(ActionEvent event) {
+        PromptDialog dialog = new PromptDialog();
+        dialog.setTitle(ResourceSource.getString("NewReport.Title"));
+        String label = ResourceSource.getString("NewReport.Label");
+        String id = "reportName";
+        String promptText = ResourceSource.getString("NewReport.PromptText");
+        
+        String okText = ResourceSource.getString("LBDialog.OK");
+        String cancelText = ResourceSource.getString("LBDialog.Cancel");
+        
+        dialog.addTextInput(label, id, null, promptText, true);
+        dialog.addButton(okText, PromptDialog.BTN_OK);
+        dialog.addButton(cancelText, PromptDialog.BTN_CANCEL);
+        dialog.setDefaultButtonId(PromptDialog.BTN_OK);
+        dialog.setCancelButtonId(PromptDialog.BTN_CANCEL);
+        
+        dialog.setButtonCloseCallback((chosenId) -> {
+            String reportName = dialog.getTextInputText(id).trim();
+            
+            if (!FileUtil.isAcceptableFileName(reportName)) {
+                String invalidMessage = ResourceSource.getString("NewReport.InvalidName", reportName);
+                String invalidTitle = ResourceSource.getString("NewReport.InvalidNameTitle");
+                PromptDialog.showOKDialog(stage, invalidMessage, invalidTitle);
+                return false;
+            }
+            
+            if (this.reportsListView.getItems().contains(reportName)) {
+                String message = ResourceSource.getString("NewReport.DuplicateReportConfirm", reportName);
+                String title = ResourceSource.getString("NewReport.DuplicateReportTitle");
+                return PromptDialog.showOKCancelDialog(stage, message, title);
+            }
+            
+            return true;
+        });
+        
+        if (dialog.showSimpleDialog(stage) == PromptDialog.BTN_OK) {
+            String newReportName = dialog.getTextInputText(id).trim();
+
+            ReportDefinition oldReportDefinition = null;
+            if (this.reportsListView.getItems().contains(newReportName)) {
+                oldReportDefinition = ReportManager.getReportDefinition(newReportName);
+            }
+            
+            ReportDefinition reportDefinition = ReportManager.createReportDefinition(newReportName, ReportDefinition.Style.NET_WORTH);
+            if (reportDefinition != null) {
+                if (!ReportSetupView.showAndWait(newReportName, reportDefinition, engine, stage)) {
+                    // Canceled, delete the report if it wasn't already existing..
+                    if (oldReportDefinition == null) {
+                        ReportManager.deleteReport(newReportName);
+                    }
+                    else {
+                        // Restore the old report...
+                        reportDefinition.copyFrom(oldReportDefinition);
+                    }
+                }
+                else {
+                    ReportManager.saveReport(newReportName);
+                    loadReportDefinitions(newReportName);
+                }
+            }
+        }
     }
 
     @FXML
     private void onDelete(ActionEvent event) {
+        String reportName = reportsListView.getSelectionModel().getSelectedItem();
+        if (reportName != null) {
+            String message = ResourceSource.getString("DeleteReport.Confirm", reportName);
+            String title = ResourceSource.getString("DeleteReport.Title");
+            if (PromptDialog.showOKCancelDialog(stage, message, title)) {
+                int index = reportsListView.getItems().indexOf(reportName);
+                if (index < 0) {
+                    index = 0;
+                }
+                
+                String nextReport = (index < (reportsListView.getItems().size() - 1)) ? reportsListView.getItems().get(index) : null;
+                
+                ReportManager.deleteReport(reportName);
+                
+                loadReportDefinitions(nextReport);
+            }
+        }
     }
 
     @FXML

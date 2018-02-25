@@ -619,7 +619,7 @@ public interface DateOffset {
         }
 
         JSONObject object = JSONLite.newJSONObject();
-        object.add(JSONLite.NAME_CLASS_NAME, offset.getClass().getCanonicalName());
+        object.putClassName(offset.getClass());
 
         if (offset instanceof DayOffset) {
             DayOffset dayOffset = (DayOffset)offset;
@@ -649,7 +649,7 @@ public interface DateOffset {
             return null;
         }
         
-        String className = object.getValue(JSONLite.NAME_CLASS_NAME).getStringValue();
+        String className = object.getClassName();
         if (DayOffset.class.getCanonicalName().equals(className)) {
             int dayCount = object.getValue("dayCount").getIntValue();
             return new DayOffset(dayCount);
@@ -705,48 +705,51 @@ public interface DateOffset {
             return null;
         }
         
-        JSONObject object = JSONLite.newJSONObject();
-        object.add(JSONLite.NAME_CLASS_NAME, dateOffset.getClass().getCanonicalName());
-        object.add("interval", dateOffset.getInterval());
-        object.add("intervalOffset", dateOffset.getIntervalOffset());
-        object.add("intervalRelation", dateOffset.getIntervalRelation());
-        object.add("subIntervalOffset", toJSONObject(dateOffset.getSubIntervalOffset()));
-        object.add("startOfWeek", dateOffset.getStartOfWeek());
+        JSONObject jsonObject = JSONLite.newJSONObject();
+        jsonObject.putClassName(dateOffset.getClass());
+        jsonObject.add("interval", dateOffset.getInterval());
+        jsonObject.add("intervalOffset", dateOffset.getIntervalOffset());
+        jsonObject.add("intervalRelation", dateOffset.getIntervalRelation());
+        jsonObject.add("subIntervalOffset", toJSONObject(dateOffset.getSubIntervalOffset()));
+        jsonObject.add("startOfWeek", dateOffset.getStartOfWeek());
         
-        return object;
+        return jsonObject;
     }
     
     /**
      * Creates a {@link Basic} date offset from a {@link JSONObject}.
-     * @param object    The JSON object to interpret.
+     * @param jsonObject    The JSON object to interpret.
      * @return The date offset, <code>null</code> if object is <code>null</code>.
      */
-    public static Basic basicFromJSON(JSONObject object) {
-        if (object == null) {
+    public static Basic basicFromJSON(JSONObject jsonObject) {
+        if (jsonObject == null) {
             return null;
         }
         
-        String className = object.getValue(JSONLite.NAME_CLASS_NAME).getStringValue();
+        String className = jsonObject.getClassName();
         if (!Basic.class.getCanonicalName().equals(className)) {
             throw new InvalidContentException("Could not read the date offset. Expected a '_className' name with a value of '" + Basic.class.getCanonicalName() + "'.");
         }
         
-        Interval interval = object.getValue("interval").getEnumValue(Interval.values());
-        int intervalOffset = object.getValue("intervalOffset").getIntValue();
-        IntervalRelation intervalRelation = object.getValue("intervalRelation").getEnumValue(IntervalRelation.values());
-        SubIntervalOffset subIntervalOffset = subIntervalOffsetFromJSON(object.getValue("subIntervalOffset"));
-        DayOfWeek startOfWeek = object.getValue("startOfWeek").getEnumValue(DayOfWeek.values());
+        Interval interval = jsonObject.getValue("interval").getEnumValue(Interval.values());
+        int intervalOffset = jsonObject.getValue("intervalOffset").getIntValue();
+        IntervalRelation intervalRelation = jsonObject.getValue("intervalRelation").getEnumValue(IntervalRelation.values());
+        SubIntervalOffset subIntervalOffset = subIntervalOffsetFromJSON(jsonObject.getValue("subIntervalOffset"));
+        DayOfWeek startOfWeek = jsonObject.getValue("startOfWeek").getEnumValue(DayOfWeek.values());
         
         return new Basic(interval, intervalOffset, intervalRelation, subIntervalOffset, startOfWeek);
     }
     
     /**
      * Creates a {@link Basic} date offset from a {@link JSONValue}.
-     * @param value    The JSON value to interpret.
+     * @param jsonValue    The JSON value to interpret.
      * @return The date offset, <code>null</code> if value is <code>null</code>.
      */
-    public static Basic basicFromJSON(JSONValue value) {
-        return basicFromJSON(value.getObjectValue());
+    public static Basic basicFromJSON(JSONValue jsonValue) {
+        if (jsonValue == null) {
+            return null;
+        }
+        return basicFromJSON(jsonValue.getObjectValue());
     }
     
 }
