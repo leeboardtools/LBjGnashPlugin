@@ -11,14 +11,14 @@ import java.util.List;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
+import javafx.scene.control.SeparatorMenuItem;
 import jgnash.engine.Engine;
 import jgnash.engine.EngineFactory;
 import jgnash.plugin.FxPlugin;
 import jgnash.uifx.views.main.MainView;
 import lbjgnash.ui.ReportDefinition;
-import lbjgnash.ui.ReportDesignerWindow;
 import lbjgnash.ui.ReportManagerView;
-import lbjgnash.ui.ReportSetupView;
+import lbjgnash.ui.ReportView;
 
 /**
  *
@@ -39,6 +39,7 @@ public class LBJGnashPlugin implements FxPlugin {
     }
     
     List<MenuItem> engineMenuItems = new ArrayList<>();
+    Menu openReportsMenu;
 
     private void installFxMenu() {
         final MenuBar menuBar = MainView.getInstance().getMenuBar();
@@ -56,12 +57,47 @@ public class LBJGnashPlugin implements FxPlugin {
         engineMenuItems.add(summaryMenuItem);
         lbMenu.getItems().add(summaryMenuItem);
         
-        MenuItem reportMenuItem = new MenuItem(ResourceSource.getString("ReportMenuItem.Title"));
-        reportMenuItem.setOnAction((event) -> {
-            onReportDesigner();
+        
+        Menu reportMenu = new Menu(ResourceSource.getString("ReportMenuItem.Title"));
+        
+        MenuItem netWorthMenuItem = new MenuItem(ResourceSource.getString("ReportMenuItem.NetWorth"));
+        netWorthMenuItem.setOnAction((event) -> {
+            onShowReportStyle(ReportDefinition.Style.NET_WORTH);
         });
-        engineMenuItems.add(reportMenuItem);
-        lbMenu.getItems().add(reportMenuItem);
+        reportMenu.getItems().add(netWorthMenuItem);
+        
+        MenuItem incomeExpenseMenuItem = new MenuItem(ResourceSource.getString("ReportMenuItem.IncomeExpense"));
+        incomeExpenseMenuItem.setOnAction((event) -> {
+            onShowReportStyle(ReportDefinition.Style.INCOME_EXPENSE);
+        });
+        reportMenu.getItems().add(incomeExpenseMenuItem);
+        
+        MenuItem portfolioMenuItem = new MenuItem(ResourceSource.getString("ReportMenuItem.Portfolio"));
+        portfolioMenuItem.setOnAction((event) -> {
+            onShowReportStyle(ReportDefinition.Style.PORTFOLIO);
+        });
+        reportMenu.getItems().add(portfolioMenuItem);
+        
+        MenuItem customMenuItem = new MenuItem(ResourceSource.getString("ReportMenuItem.Custom"));
+        customMenuItem.setOnAction((event) -> {
+            onShowReportStyle(ReportDefinition.Style.CUSTOM);
+        });
+        reportMenu.getItems().add(customMenuItem);
+
+        reportMenu.getItems().add(new SeparatorMenuItem());
+        
+        MenuItem reportManagerMenuItem = new MenuItem(ResourceSource.getString("ReportMenuItem.ReportManager"));
+        reportManagerMenuItem.setOnAction((event) -> {
+            onReportManager();
+        });
+        reportMenu.getItems().add(reportManagerMenuItem);
+        
+        reportMenu.getItems().add(new SeparatorMenuItem());
+        openReportsMenu = new Menu(ResourceSource.getString("ReportMenuItem.OpenReports"));
+        reportMenu.getItems().add(openReportsMenu);
+        
+        engineMenuItems.add(reportMenu);
+        lbMenu.getItems().add(reportMenu);
     }
     
     private void updateMenu() {
@@ -70,20 +106,40 @@ public class LBJGnashPlugin implements FxPlugin {
         engineMenuItems.forEach((menuItem) -> {
             menuItem.setDisable(disableMenuItems);
         });
+        
+        if (engine != null) {
+            openReportsMenu.getItems().clear();
+            List<ReportView.ReportViewEntry> entries = ReportView.getOpenReports();
+            if (entries.isEmpty()) {
+                openReportsMenu.setDisable(true);
+            }
+            else {
+                openReportsMenu.setDisable(false);
+                entries.forEach((entry) -> {
+                    MenuItem menuItem = new MenuItem(entry.getReportLabel());
+                    menuItem.setOnAction((event) -> {
+                        entry.getReportView().requestFocus();
+                    });
+                    openReportsMenu.getItems().add(menuItem);
+                });
+            }
+        }
     }
     
     private void onSummary() {
     }
     
     
-    private ReportDefinition reportDefinition = ReportDefinition.standardNetWorthDefintion();
-
-    private void onReportDesigner() {
+    private void onShowReportStyle(ReportDefinition.Style style) {
         final Engine engine = EngineFactory.getEngine(EngineFactory.DEFAULT);
         if (engine != null) {
-            //ReportDesignerWindow.showReportDesignerWindow(engine, null);
-            //ReportDefinition definition = ReportDefinition.standardNetWorthDefintion();
-            //ReportSetupView.showAndWait("Test Report", reportDefinition, engine, MainView.getPrimaryStage());
+            ReportView.openReportView(style, engine, MainView.getPrimaryStage());
+        }
+    }
+    
+    private void onReportManager() {
+        final Engine engine = EngineFactory.getEngine(EngineFactory.DEFAULT);
+        if (engine != null) {
             ReportManagerView.showAndWait(engine, MainView.getPrimaryStage());
         }
     }

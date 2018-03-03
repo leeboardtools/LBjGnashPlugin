@@ -246,6 +246,7 @@ public class ReportDefinition extends CompositeObservable {
         definition.setDateGenerator(new PeriodicDateGenerator(DateOffset.SAME_DAY, DateOffset.END_OF_LAST_YEAR, 0));
         definition.getAccountFilter().getAccountGroupsToInclude().add(AccountGroup.ASSET);
         definition.getAccountFilter().getAccountGroupsToInclude().add(AccountGroup.LIABILITY);
+        definition.getColumnTypes().add(ColumnType.VALUE);
         
         return definition;
     }
@@ -259,6 +260,7 @@ public class ReportDefinition extends CompositeObservable {
         definition.setRangeDateOffset(new DateOffset.Basic(DateOffset.Interval.YEAR, 1, DateOffset.IntervalRelation.FIRST_DAY));
         definition.getAccountFilter().getAccountGroupsToInclude().add(AccountGroup.INCOME);
         definition.getAccountFilter().getAccountGroupsToInclude().add(AccountGroup.EXPENSE);
+        definition.getColumnTypes().add(ColumnType.VALUE);
         
         return definition;
     }
@@ -271,6 +273,11 @@ public class ReportDefinition extends CompositeObservable {
         definition.setDateGenerator(new PeriodicDateGenerator(DateOffset.SAME_DAY, DateOffset.END_OF_LAST_YEAR, 0));
         definition.getAccountFilter().getAccountTypesToInclude().add(AccountType.CASH);
         definition.getAccountFilter().getAccountGroupsToInclude().add(AccountGroup.INVEST);
+        definition.getColumnTypes().add(ColumnType.QUANTITY);
+        definition.getColumnTypes().add(ColumnType.PRICE);
+        definition.getColumnTypes().add(ColumnType.COST_BASIS);
+        definition.getColumnTypes().add(ColumnType.GAIN);
+        definition.getColumnTypes().add(ColumnType.VALUE);
         
         return definition;
     }

@@ -18,27 +18,14 @@ package lbjgnash.ui;
 import com.leeboardtools.dialog.PromptDialog;
 import com.leeboardtools.util.FileUtil;
 import com.leeboardtools.util.ResourceSource;
-import java.io.IOException;
 import java.net.URL;
-import java.nio.file.DirectoryStream;
-import java.nio.file.FileSystems;
-import java.nio.file.Files;
-import java.nio.file.InvalidPathException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ResourceBundle;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
-import javafx.geometry.Point2D;
 import javafx.scene.control.Button;
 import javafx.scene.control.ListView;
-import javafx.scene.control.TextInputDialog;
-import javafx.scene.control.cell.TextFieldListCell;
 import javafx.stage.Stage;
-import javafx.util.StringConverter;
 import jgnash.engine.Engine;
 
 /**
@@ -89,6 +76,10 @@ public class ReportManagerViewController implements Initializable {
 
     @FXML
     private void onOpen(ActionEvent event) {
+        String reportName = reportsListView.getSelectionModel().getSelectedItem();
+        if (reportName != null) {
+            ReportView.openReportView(reportName, engine, stage);
+        }
     }
 
     @FXML
