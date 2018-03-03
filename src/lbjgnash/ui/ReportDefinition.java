@@ -245,6 +245,8 @@ public class ReportDefinition extends CompositeObservable {
         
         definition.setDateGenerator(new PeriodicDateGenerator(DateOffset.SAME_DAY, DateOffset.END_OF_LAST_YEAR, 0));
         definition.getAccountFilter().getAccountGroupsToInclude().add(AccountGroup.ASSET);
+        definition.getAccountFilter().getAccountGroupsToInclude().add(AccountGroup.INVEST);
+        definition.getAccountFilter().getAccountGroupsToInclude().add(AccountGroup.SIMPLEINVEST);
         definition.getAccountFilter().getAccountGroupsToInclude().add(AccountGroup.LIABILITY);
         definition.getColumnTypes().add(ColumnType.VALUE);
         

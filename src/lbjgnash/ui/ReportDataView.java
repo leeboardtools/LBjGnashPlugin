@@ -48,14 +48,14 @@ import jgnash.engine.Engine;
  * @author Albert Santos
  */
 public class ReportDataView {
-    private final TableView<RowValues> tableView;
+    private final TableView<RowCellValues> tableView;
     private ReportDefinition definition;
     private Engine engine;
     
     // TODO: Move this to ReportDefinition.
     protected DateTimeFormatter columnDateTimeFormatter = DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT);
     
-    protected TableColumn<RowValues, String> headingColumn;
+    protected TableColumn<RowCellValues, String> headingColumn;
     
     public static final BigDecimal ONE_HUNDRED = new BigDecimal(100);
 
@@ -86,13 +86,13 @@ public class ReportDataView {
     
     
     /**
-     * This represents the values of an individual row in the {@link TableView }.
+     * This holds the value properties for the cell values of the {@link TableView}.
      */
-    protected class RowValues {
+    protected class RowCellValues {
         private final ArrayList<StringProperty> columnValues = new ArrayList<>();
         private final StringProperty headingText = new SimpleStringProperty(this, "headingText");
         
-        protected RowValues(String headingText) {
+        protected RowCellValues(String headingText) {
             this.headingText.set(headingText);
         }
         
@@ -122,7 +122,7 @@ public class ReportDataView {
      * This represents an individual {@link TableColumn}.
      */
     protected class ColumnEntry implements Similarable<ColumnEntry> {
-        protected TableColumn<RowValues, String> tableColumn = new TableColumn<>();
+        protected TableColumn<RowCellValues, String> tableColumn = new TableColumn<>();
         protected final List<String> rowValues = new ArrayList<>();
         
         // This is set as the column entries of the DateEntries are added
@@ -130,7 +130,7 @@ public class ReportDataView {
         int columnIndex;
         
         protected ColumnEntry() {
-            tableColumn.setCellValueFactory((TableColumn.CellDataFeatures<RowValues, String> param) -> {
+            tableColumn.setCellValueFactory((TableColumn.CellDataFeatures<RowCellValues, String> param) -> {
                 return param.getValue().getColumnValueProperty(columnIndex);
             });
         }
@@ -162,11 +162,11 @@ public class ReportDataView {
     
     /**
      * This is used to manage individual rows within a {@link ReportOutput}.
-     * It's separate from {@link RowValues} so we can generate this separately
-     * and then re-use the row values if possible.
+     * It's separate from {@link RowCellValues} so we can generate this separately
+     * and then re-use the row cell values as needed.
      */
     protected class RowEntry implements Similarable<RowEntry> {
-        // This set as the row entries of the AccountEntries are added to the
+        // This is set as the row entries of the AccountEntries are added to the
         // ReportOtuput's rowEntries list. This happens before the column generators
         // are called for the DateEntries.
         int rowIndex;
@@ -498,6 +498,7 @@ public class ReportDataView {
     protected abstract class BalanceColumnGenerator extends ColumnGenerator {
         int maxIncludedAccountDepth;
         int minIncludedAccountDepth;
+        BigDecimal subTotal;
         
         BalanceRowType getRowType(AccountEntry accountEntry) {
             boolean isSubTotal = accountEntry.isAnyChildAccountIncluded();
@@ -518,22 +519,21 @@ public class ReportDataView {
 
         @Override
         protected void setupAccountEntryRows(AccountEntry accountEntry, ReportOutput reportOutput) {
-            BalanceRowType rowType = getRowType(accountEntry);
-            if (rowType == BalanceRowType.NOT_USED) {
-                return;
-            }
+            if (accountEntry.isIncluded) {
+                accountEntry.useAccountRowEntry(AccountRowEntry.POST_CHILD_ACCOUNT);
 
-            accountEntry.useAccountRowEntry(AccountRowEntry.POST_CHILD_ACCOUNT);
-            if (isSubTotal(rowType)) {
-                // The spacer row after the sub-total.
-                accountEntry.useAccountRowEntry(AccountRowEntry.POST_ACCOUNT);
-            }
-            
-            if (accountEntry.accountDepth > maxIncludedAccountDepth) {
-                maxIncludedAccountDepth = accountEntry.accountDepth;
-            }
-            if (accountEntry.accountDepth < minIncludedAccountDepth) {
-                minIncludedAccountDepth = accountEntry.accountDepth;
+                boolean isSubTotal = accountEntry.isAnyChildAccountIncluded();
+                if (isSubTotal) {
+                    // The spacer row after the sub-total.
+                    accountEntry.useAccountRowEntry(AccountRowEntry.POST_ACCOUNT);
+                }
+                
+                if (accountEntry.accountDepth > maxIncludedAccountDepth) {
+                    maxIncludedAccountDepth = accountEntry.accountDepth;
+                }
+                if (accountEntry.accountDepth < minIncludedAccountDepth) {
+                    minIncludedAccountDepth = accountEntry.accountDepth;
+                }
             }
 
             super.setupAccountEntryRows(accountEntry, reportOutput);
@@ -541,25 +541,46 @@ public class ReportDataView {
 
         @Override
         protected void setupDateEntryColumns(DateEntry dateEntry, AccountEntry accountEntry, ReportOutput reportOutput, int columnIndexBase) {
-            BalanceRowType rowType = getRowType(accountEntry);
-            if (rowType == BalanceRowType.NOT_USED) {
+            if (!accountEntry.isIncluded) {
+                super.setupDateEntryColumns(dateEntry, accountEntry, reportOutput, columnIndexBase);
                 return;
             }
             
-            int columnOffset = maxIncludedAccountDepth - accountEntry.accountDepth;
-            final ColumnEntry columnEntry = dateEntry.getColumnEntryAtIndex(columnOffset + columnIndexBase);
-            columnEntry.tableColumn.setText(getColumnTitle(columnOffset, accountEntry, dateEntry, reportOutput));
-            
-            super.setupDateEntryColumns(dateEntry, accountEntry, reportOutput, columnIndexBase);
+            BigDecimal previousSubTotal = subTotal;
+            subTotal = BigDecimal.ZERO;
+            try {
+                int columnOffset = maxIncludedAccountDepth - accountEntry.accountDepth;
+                final ColumnEntry columnEntry = dateEntry.getColumnEntryAtIndex(columnOffset + columnIndexBase);
+                columnEntry.tableColumn.setText(getColumnTitle(columnOffset, accountEntry, dateEntry, reportOutput));
 
-            final RowEntry rowEntry = accountEntry.getAccountRowEntry(AccountRowEntry.POST_CHILD_ACCOUNT);
-            updateAccountRowValue(rowEntry, columnEntry, rowType, accountEntry, dateEntry, reportOutput);
+                super.setupDateEntryColumns(dateEntry, accountEntry, reportOutput, columnIndexBase);
+
+                final RowEntry rowEntry = accountEntry.getAccountRowEntry(AccountRowEntry.POST_CHILD_ACCOUNT);
+
+                BigDecimal balance = getInternalAccountBalance(rowEntry, columnEntry, accountEntry, dateEntry, reportOutput);
+                subTotal = subTotal.add(balance);
+                
+                updateAccountRowValue(subTotal, rowEntry, columnEntry, accountEntry, dateEntry, reportOutput);
+                
+            } finally {
+                if (previousSubTotal != null) {
+                    previousSubTotal = previousSubTotal.add(subTotal);
+                }
+                subTotal = previousSubTotal;
+            }
         }
         
         
-        abstract String getColumnTitle(int columnOffset, AccountEntry accountEntry, DateEntry dateEntry, ReportOutput reportOutput);
+        protected abstract String getColumnTitle(int columnOffset, AccountEntry accountEntry, DateEntry dateEntry, ReportOutput reportOutput);
         
-        abstract void updateAccountRowValue(RowEntry rowEntry, ColumnEntry columnEntry, BalanceRowType rowType,
+        
+        protected BigDecimal getInternalAccountBalance(RowEntry rowEntry, ColumnEntry columnEntry, 
+                AccountEntry accountEntry, DateEntry dateEntry, ReportOutput reportOutput) {
+            return accountEntry.account.getBalance(dateEntry.dateEnd);
+        }
+        
+        
+        protected abstract void updateAccountRowValue(BigDecimal balance, RowEntry rowEntry, ColumnEntry columnEntry, 
                 AccountEntry accountEntry, DateEntry dateEntry, ReportOutput reportOutput);
     }
     
@@ -570,19 +591,17 @@ public class ReportDataView {
     protected class ValueColumnGenerator extends BalanceColumnGenerator {
 
         @Override
-        void updateAccountRowValue(RowEntry rowEntry, ColumnEntry columnEntry, BalanceRowType rowType, 
-                AccountEntry accountEntry, DateEntry dateEntry, ReportOutput reportOutput) {
-            BigDecimal balance = accountEntry.account.getBalance(dateEntry.dateEnd);
-            String value = toMonetaryValueString(balance);
-            columnEntry.setRowValue(rowEntry, value);
-        }
-
-        @Override
-        String getColumnTitle(int columnOffset, AccountEntry accountEntry, DateEntry dateEntry, ReportOutput reportOutput) {
+        protected String getColumnTitle(int columnOffset, AccountEntry accountEntry, DateEntry dateEntry, ReportOutput reportOutput) {
             if (columnOffset == 0) {
                 return ResourceSource.getString("Report.ColumnHeading.Value");
             }
             return "";
+        }
+
+        @Override
+        protected void updateAccountRowValue(BigDecimal balance, RowEntry rowEntry, ColumnEntry columnEntry, AccountEntry accountEntry, DateEntry dateEntry, ReportOutput reportOutput) {
+            String value = toMonetaryValueString(balance);
+            columnEntry.setRowValue(rowEntry, value);
         }
         
     }
@@ -593,7 +612,7 @@ public class ReportDataView {
     public ReportDataView() {
         tableView = new TableView<>();
         headingColumn = new TableColumn<>();
-        headingColumn.setCellValueFactory((TableColumn.CellDataFeatures<RowValues, String> param) -> {
+        headingColumn.setCellValueFactory((TableColumn.CellDataFeatures<RowCellValues, String> param) -> {
             return param.getValue().headingText;
         });
     }
@@ -654,9 +673,9 @@ public class ReportDataView {
     
     
     protected void replaceAllTableCells(ReportOutput reportOutput) {
-        ObservableList<RowValues> rowValues = FXCollections.observableArrayList();
+        ObservableList<RowCellValues> rowValues = FXCollections.observableArrayList();
         reportOutput.rowEntries.forEach((rowEntry) -> {
-            rowValues.add(new RowValues(rowEntry.rowTitle));
+            rowValues.add(new RowCellValues(rowEntry.rowTitle));
         });
         
         tableView.getItems().clear();
@@ -664,7 +683,7 @@ public class ReportDataView {
         
         tableView.getColumns().add(headingColumn);
         
-        List<TableColumn<RowValues, String>> columnGroup = new ArrayList<>();
+        List<TableColumn<RowCellValues, String>> columnGroup = new ArrayList<>();
         reportOutput.dateEntries.forEach((dateEntry) -> {
             columnGroup.clear();
             dateEntry.columnEntries.forEach((columnEntry) -> {
@@ -673,7 +692,7 @@ public class ReportDataView {
                 }
             });
             
-            TableColumn<RowValues, String> dateColumn;
+            TableColumn<RowCellValues, String> dateColumn;
             if (columnGroup.size() == 1) {
                 // Single column, it's going to be the date column.
                 dateColumn = columnGroup.get(0);
