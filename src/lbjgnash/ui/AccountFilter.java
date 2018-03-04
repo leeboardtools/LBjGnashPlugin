@@ -40,7 +40,7 @@ public class AccountFilter extends CompositeObservable {
     private final ObservableSet<AccountType> accountTypesToInclude = FXCollections.observableSet(new HashSet<>());
     private final ObservableSet<AccountGroup> accountGroupsToInclude = FXCollections.observableSet(new HashSet<>());
     private final ObservableSet<String> accountNamesToInclude = FXCollections.observableSet(new TreeSet<>());
-    private boolean includeHiddenAccounts = true;
+    private boolean includeHiddenAccounts = false;
     
     private final ObservableSet<AccountType> accountTypesToExclude = FXCollections.observableSet(new HashSet<>());
     private final ObservableSet<AccountGroup> accountGroupsToExclude = FXCollections.observableSet(new HashSet<>());

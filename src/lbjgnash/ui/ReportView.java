@@ -15,26 +15,19 @@
  */
 package lbjgnash.ui;
 
-import com.leeboardtools.dialog.PromptDialog;
-import com.leeboardtools.time.PeriodicDateGenerator;
 import com.leeboardtools.util.StringUtil;
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Control;
 import javafx.scene.control.Label;
-import javafx.scene.control.TableView;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import jgnash.engine.Engine;
-import jgnash.engine.message.ChannelEvent;
-import jgnash.engine.message.MessageChannel;
 
 /**
  * TODO Add message channel listeners.
@@ -91,7 +84,11 @@ public class ReportView {
         
         this.mainVBox = new VBox();
         this.mainScene = new Scene(this.mainVBox);
+        this.mainScene.getStylesheets().add("lbjgnash/ui/Styles.css");
+        
         this.stage.setScene(this.mainScene);
+        
+        this.mainVBox.setPrefSize(800, 600);
         
         setupEngineListeners();
         
@@ -107,7 +104,7 @@ public class ReportView {
     
     protected void takeDownEngineListeners() {
         if (this.reportDataView != null) {
-            this.reportDataView.shutDownTableView();
+            this.reportDataView.shutDownView();
         }
     }
     

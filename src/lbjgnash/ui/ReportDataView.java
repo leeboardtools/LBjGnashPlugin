@@ -16,29 +16,29 @@
 package lbjgnash.ui;
 
 import com.leeboardtools.util.ResourceSource;
-import com.leeboardtools.util.Similarable;
+import com.leeboardtools.util.StringUtil;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedSet;
+import java.util.TreeMap;
 import java.util.TreeSet;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
-import javafx.beans.value.ObservableValue;
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
 import javafx.scene.control.Control;
-import javafx.scene.control.TableColumn;
-import javafx.scene.control.TableView;
-import javafx.util.Callback;
+import javafx.scene.control.TreeItem;
+import javafx.scene.control.TreeTableColumn;
+import javafx.scene.control.TreeTableView;
+import javafx.scene.control.cell.TextFieldTreeTableCell;
 import jgnash.engine.Account;
 import jgnash.engine.AccountGroup;
 import jgnash.engine.Engine;
@@ -48,18 +48,24 @@ import jgnash.engine.Engine;
  * @author Albert Santos
  */
 public class ReportDataView {
-    private final TableView<RowCellValues> tableView;
+    private final TreeTableView<RowEntry> treeTableView;
     private ReportDefinition definition;
     private Engine engine;
     
     // TODO: Move this to ReportDefinition.
     protected DateTimeFormatter columnDateTimeFormatter = DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT);
     
-    protected TableColumn<RowCellValues, String> headingColumn;
+    protected TreeTableColumn<RowEntry, String> headingColumn;
     
     public static final BigDecimal ONE_HUNDRED = new BigDecimal(100);
 
     protected ReportOutput currentReportOutput;
+    
+    public static final String STYLE_CELL       = "report-cell";
+    public static final String STYLE_SUBTOTAL   = "report-cell-subtotal";
+    public static final String STYLE_SUMMARY    = "report-cell-summary";
+    public static final String STYLE_BALANCE_VALUE      = "report-cell-balance-value";
+    public static final String STYLE_GRAND_TOTAL    = "report-cell-grand-total";
 
     //
     // TODO
@@ -83,105 +89,95 @@ public class ReportDataView {
     // 
     
     
-    
-    
     /**
-     * This holds the value properties for the cell values of the {@link TableView}.
+     * Used as the class for the cells of the {@link TreeTableView} so we can
+     * associate data accessible to individual {@link Cell}s.
      */
-    protected class RowCellValues {
-        private final ArrayList<StringProperty> columnValues = new ArrayList<>();
-        private final StringProperty headingText = new SimpleStringProperty(this, "headingText");
+    protected static class CellEntry {
+        final RowEntry rowEntry;
+        final String value;
         
-        protected RowCellValues(String headingText) {
-            this.headingText.set(headingText);
+        protected CellEntry(RowEntry rowEntry, String value) {
+            this.rowEntry = rowEntry;
+            this.value = value;
         }
-        
-        protected final StringProperty getColumnValueProperty(int index) {
-            if (index >= columnValues.size()) {
-                return null;
-            }
-            return columnValues.get(index);
-        }
-        
-        protected final void setColumnValue(int index, String value) {
-            while (index >= columnValues.size()) {
-                columnValues.add(null);
-            }
-            StringProperty property = columnValues.get(index);
-            if (property == null) {
-                property = new SimpleStringProperty(this, "column" + index, value);
-                columnValues.set(index, property);
-            }
-            else {
-                columnValues.get(index).set(value);
-            }
-        }
+
+        @Override
+        public String toString() {
+            return value;
+        }        
     }
     
     /**
-     * This represents an individual {@link TableColumn}.
+     * This an individual row for the {@link TreeTableView}.
      */
-    protected class ColumnEntry implements Similarable<ColumnEntry> {
-        protected TableColumn<RowCellValues, String> tableColumn = new TableColumn<>();
-        protected final List<String> rowValues = new ArrayList<>();
+    protected class RowEntry {
+        final StringProperty rowTitle = new SimpleStringProperty(this, "rowTitle", null);
+        final List<ObjectProperty<CellEntry>> expandedColumnCellProperties = new ArrayList<>();
+        final List<ObjectProperty<CellEntry>> nonExpandedColumnCellProperties = new ArrayList<>();
+
+        protected void setRowTitle(String title) {
+            this.rowTitle.set(title);
+        }
+        protected StringProperty getRowTitle() {
+            return this.rowTitle;
+        }
+        
+        protected ObjectProperty<CellEntry> getColumnCellProperties(int index, TreeItem<RowEntry> entry) {
+            List<ObjectProperty<CellEntry>> propertiesList = (entry.isExpanded()) 
+                ? expandedColumnCellProperties
+                : nonExpandedColumnCellProperties;
+            if (index >= propertiesList.size()) {
+                return null;
+            }
+            return propertiesList.get(index);
+        }
+        
+        protected void setExpandedColumnCellValue(ColumnEntry columnEntry, CellEntry cellEntry) {
+            setColumnCellValue(expandedColumnCellProperties, columnEntry.columnIndex, cellEntry);
+        }
+        protected void setNonExpandedColumnCellValue(ColumnEntry columnEntry, CellEntry cellEntry) {
+            setColumnCellValue(nonExpandedColumnCellProperties, columnEntry.columnIndex, cellEntry);
+        }
+        
+        protected void setColumnCellValue(List<ObjectProperty<CellEntry>> properties, int index, CellEntry cellEntry) {
+            while (index >= properties.size()) {
+                properties.add(null);
+            }
+            
+            ObjectProperty<CellEntry> property = properties.get(index);
+            if (property == null) {
+                property = new SimpleObjectProperty();
+                properties.set(index, property);
+            }
+            
+            property.set(cellEntry);
+        }
+    }
+    
+    
+    /**
+     * This represents an individual {@link TreeTableColumn}.
+     */
+    protected class ColumnEntry {
+        protected TreeTableColumn<RowEntry, CellEntry> treeTableColumn = new TreeTableColumn<>();
         
         // This is set as the column entries of the DateEntries are added
         // to the ReportOutput's columnEntries list.
         int columnIndex;
         
         protected ColumnEntry() {
-            tableColumn.setCellValueFactory((TableColumn.CellDataFeatures<RowCellValues, String> param) -> {
-                return param.getValue().getColumnValueProperty(columnIndex);
+            treeTableColumn.setCellValueFactory((TreeTableColumn.CellDataFeatures<RowEntry, CellEntry> param) -> {
+                return param.getValue().getValue().getColumnCellProperties(columnIndex, param.getValue());
             });
         }
-
-        @Override
-        public boolean isSimilar(ColumnEntry other) {
-            if (other == null) {
-                return false;
-            }
-            if (getClass() != other.getClass()) {
-                return false;
-            }
-            if (columnIndex != other.columnIndex) {
-                return false;
-            }
-            return true;
+        
+        protected void setExpandedRowValue(RowEntry rowEntry, CellEntry cellEntry) {
+            rowEntry.setExpandedColumnCellValue(this, cellEntry);
         }
         
-        
-        protected void setRowValue(RowEntry rowEntry, String value) {
-            while (rowEntry.rowIndex >= rowValues.size()) {
-                rowValues.add(null);
-            }
-            
-            rowValues.set(rowEntry.rowIndex, value);
-        }
-    }
-    
-    
-    /**
-     * This is used to manage individual rows within a {@link ReportOutput}.
-     * It's separate from {@link RowCellValues} so we can generate this separately
-     * and then re-use the row cell values as needed.
-     */
-    protected class RowEntry implements Similarable<RowEntry> {
-        // This is set as the row entries of the AccountEntries are added to the
-        // ReportOtuput's rowEntries list. This happens before the column generators
-        // are called for the DateEntries.
-        int rowIndex;
-        
-        String rowTitle;
-
-        @Override
-        public boolean isSimilar(RowEntry other) {
-            if (other == null) {
-                return false;
-            }
-            if (getClass() != other.getClass()) {
-                return false;
-            }
-            return true;
+        protected void setNonExpandedRowValue(RowEntry rowEntry, CellEntry cellEntry) {
+            rowEntry.setNonExpandedColumnCellValue(this, cellEntry);
         }
     }
     
@@ -189,58 +185,15 @@ public class ReportDataView {
     /**
      * This represents the full output of one report.
      */
-    protected class ReportOutput implements Similarable<ReportOutput> {
+    protected class ReportOutput {
         final List<AccountEntry> accountEntries = new ArrayList<>();
         final List<DateEntry> dateEntries = new ArrayList<>();
         final List<ColumnGenerator> columnGenerators = new ArrayList<>();
         
-        // This list is built up from the row enries of the accountEntries.
-        final List<RowEntry> rowEntries = new ArrayList<>();
-        
         // This list is built up from the column entries of the dateEntries.
         final List<ColumnEntry> columnEntries = new ArrayList<>();
-        
 
-        @Override
-        public boolean isSimilar(ReportOutput other) {
-            if (other == null) {
-                return false;
-            }
-            if (getClass() != other.getClass()) {
-                return false;
-            }
-            if (!Similarable.areSimilar(accountEntries, other.accountEntries)) {
-                return false;
-            }
-            if (!Similarable.areSimilar(dateEntries, other.dateEntries)) {
-                return false;
-            }
-            if (!Similarable.areSimilar(columnGenerators, other.columnGenerators)) {
-                return false;
-            }
-            if (!Similarable.areSimilar(columnEntries, other.columnEntries)) {
-                return false;
-            }
-            if (!Similarable.areSimilar(rowEntries, other.rowEntries)) {
-                return false;
-            }
-            
-            return true;
-        }
-        
-        void addRowEntryIfNotNull(RowEntry rowEntry) {
-            if (rowEntry != null) {
-                rowEntry.rowIndex = rowEntries.size();
-                rowEntries.add(rowEntry);
-            }
-        }
-        
-        void addColumnEntryIfNotNull(ColumnEntry columnEntry) {
-            if (columnEntry != null) {
-                columnEntry.columnIndex = columnEntries.size();
-                columnEntries.add(columnEntry);
-            }
-        }
+        RowEntry grandTotalRowEntry;
     }
     
     
@@ -255,17 +208,28 @@ public class ReportDataView {
     /**
      * Encapsulates a single account, with a list of all the child accounts.
      */
-    protected class AccountEntry implements Similarable<AccountEntry> {
+    protected class AccountEntry {
         final Account account;
         final int accountDepth;
         final List<AccountEntry> childAccountEntries = new ArrayList<>();
         final boolean isIncluded;
+        final int includeDepth;
+        RowEntry summaryRowEntry;
         final RowEntry [] accountRowEntries = new RowEntry[AccountRowEntry.values().length];
         
-        protected AccountEntry(Account account, boolean isIncluded) {
+        protected AccountEntry(Account account, boolean isIncluded, AccountEntry parentAccountEntry) {
             this.account = account;
             this.accountDepth = account.getDepth();
             this.isIncluded = isIncluded;
+
+            int myIncludeDepth = (parentAccountEntry != null) ? parentAccountEntry.includeDepth : 0;
+            if (isIncluded) {
+                ++myIncludeDepth;
+                summaryRowEntry = new RowEntry();
+                summaryRowEntry.setRowTitle(account.getName());
+            }
+            
+            this.includeDepth = myIncludeDepth;
         }
         
         /**
@@ -291,7 +255,7 @@ public class ReportDataView {
                 accountRowEntries[accountRowEntry.ordinal()] = rowEntry;
                 if ((accountRowEntry == AccountRowEntry.PRE_CHILD_ACCOUNT) 
                     || (accountRowEntry == AccountRowEntry.POST_CHILD_ACCOUNT)) {
-                    rowEntry.rowTitle = account.getPathName();
+                    rowEntry.setRowTitle(account.getName());
                 }
             }
             return accountRowEntries[accountRowEntry.ordinal()];
@@ -330,34 +294,6 @@ public class ReportDataView {
             
             return deepestDepth;
         }
-        
-        @Override
-        public boolean isSimilar(AccountEntry other) {
-            if (other == null) {
-                return false;
-            }
-            if (getClass() != other.getClass()) {
-                return false;
-            }
-            if (account != other.account) {
-                return false;
-            }
-            // Don't care about accountDepth, as that is associated with the account.
-            
-            if (isIncluded != other.isIncluded) {
-                return false;
-            }
-            
-            if (!Similarable.areSimilar(accountRowEntries, other.accountRowEntries)) {
-                return false;
-            }
-            
-            if (!Similarable.areSimilar(childAccountEntries, other.childAccountEntries)) {
-                return false;
-            }
-            
-            return true;
-        }
     }
     
     
@@ -365,41 +301,18 @@ public class ReportDataView {
      * This manages the report column data for a specific date (which was generated by
      * the report's date generator.
      */
-    protected class DateEntry implements Similarable<DateEntry> {
-        final LocalDate dateStart;
-        final LocalDate dateEnd;
+    protected class DateEntry implements Comparable<DateEntry> {
+        final LocalDate startDate;
+        final LocalDate endDate;
         final int index;
         final List<ColumnEntry> columnEntries = new ArrayList<>();
         
         protected DateEntry(LocalDate dateStart, LocalDate dateEnd, int index) {
-            this.dateStart = dateStart;
-            this.dateEnd = dateEnd;
+            this.startDate = dateStart;
+            this.endDate = dateEnd;
             this.index = index;
         }
 
-        
-        @Override
-        public boolean isSimilar(DateEntry other) {
-            if (other == null) {
-                return false;
-            }
-            if (getClass() != other.getClass()) {
-                return false;
-            }
-            
-            if (!dateStart.equals(other.dateStart)) {
-                return false;
-            }
-            if (!dateEnd.equals(other.dateEnd)) {
-                return false;
-            }
-            if (index != other.index) {
-                return false;
-            }
-            return true;
-        }
-        
-        
         protected ColumnEntry getColumnEntryAtIndex(int index) {
             while (index >= columnEntries.size()) {
                 columnEntries.add(new ColumnEntry());
@@ -407,33 +320,20 @@ public class ReportDataView {
             
             return columnEntries.get(index);
         }
+
+        @Override
+        public int compareTo(DateEntry o) {
+            return endDate.compareTo(o.endDate);
+        }
         
     }
     
     
     /**
-     * This abstract class is the base class for the objects that manage the TableColumn
-     * entries for the report column types.
+     * The base abstract class for the objects responsible for generating {@link ColumnEntry}
+     * objects.
      */
-    protected abstract class ColumnGenerator implements Similarable<ColumnGenerator> {
-        protected final List<ColumnEntry> columnEntries = new ArrayList<>();
-        
-
-        @Override
-        public boolean isSimilar(ColumnGenerator other) {
-            if (other == null) {
-                return false;
-            }
-            if (getClass() != other.getClass()) {
-                return false;
-            }
-            if (!Similarable.areSimilar(columnEntries, other.columnEntries)) {
-                return false;
-            }
-            
-            return true;
-        }
-        
+    protected abstract class ColumnGenerator {
         
         protected void setupAccountEntryRows(ReportOutput reportOutput) {
             reportOutput.accountEntries.forEach((accountEntry) -> {
@@ -478,18 +378,111 @@ public class ReportDataView {
                 setupDateEntryColumns(dateEntry, childAccountEntry, reportOutput, columnIndexBase);
             });
         }
+        
+        
+        protected void updateCellValues(ReportOutput reportOutput) {
+            reportOutput.dateEntries.forEach((dateEntry) -> {
+                reportOutput.accountEntries.forEach((accountEntry) -> {
+                    updateDateEntryCellValues(dateEntry, accountEntry, reportOutput);
+                });
+                
+                if (reportOutput.grandTotalRowEntry != null) {
+                    updateGrandTotalCellValue(dateEntry, reportOutput);
+                }
+            });
+        }
 
+        /**
+         * This is normally overridden to handle the actual setting of the cell for a given
+         * date entry and account entry. This implementation should normally be called from
+         * the overridden method because it calls itself for all the child account entries.
+         * @param dateEntry The date entry being processed.
+         * @param accountEntry  The account entry this is for.
+         * @param reportOutput The report output this is for.
+         */
+        protected void updateDateEntryCellValues(DateEntry dateEntry, AccountEntry accountEntry, ReportOutput reportOutput) {
+            accountEntry.childAccountEntries.forEach((childAccountEntry)-> {
+                updateDateEntryCellValues(dateEntry, childAccountEntry, reportOutput);
+            });
+        }
+        
+        
+        protected void updateGrandTotalCellValue(DateEntry dateEntry, ReportOutput reportOutput) {
+        }
     }
     
     
-    static enum BalanceRowType {
-        VALUE,
-        SUB_TOTAL_INCLUDED,
-        SUB_TOTAL_EXCLUDED,
-        NOT_USED,
-    };
-    static boolean isSubTotal(BalanceRowType type) {
-        return (type == BalanceRowType.SUB_TOTAL_EXCLUDED) || (type == BalanceRowType.SUB_TOTAL_INCLUDED);
+    protected class BalanceAccountEntryInfo {
+        final AccountEntry accountEntry;
+        final RowEntry rowEntry;
+        final ColumnEntry columnEntry;
+        final BigDecimal balance;
+        
+        protected BalanceAccountEntryInfo(AccountEntry accountEntry, RowEntry rowEntry, ColumnEntry columnEntry, BigDecimal balance) {
+            this.accountEntry = accountEntry;
+            this.rowEntry = rowEntry;
+            this.columnEntry = columnEntry;
+            this.balance = balance;
+        }
+    }
+    
+    protected class BalanceDateEntryInfo {
+        final Map<AccountEntry, BalanceAccountEntryInfo> accountEntryInfos = new HashMap<>();
+        BigDecimal totalBalance = BigDecimal.ZERO;
+        final int columnIndexBase;
+
+        public BalanceDateEntryInfo(int columnIndexBase) {
+            this.columnIndexBase = columnIndexBase;
+        }
+    }
+    
+    protected static class BalanceCellEntry extends CellEntry {
+        final BalanceAccountEntryInfo accountEntryInfo;
+        String basicStyle = STYLE_BALANCE_VALUE;
+
+        protected BalanceCellEntry(BalanceAccountEntryInfo accountEntryInfo,
+            RowEntry rowEntry, String value) {
+            super(rowEntry, value);
+            this.accountEntryInfo = accountEntryInfo;
+        }
+    }
+    
+    protected static class BalanceTreeCell extends TextFieldTreeTableCell<RowEntry, CellEntry> {
+        final BalanceColumnGenerator generator;
+        final BalanceDateEntryInfo dateEntryInfo;
+        
+        BalanceTreeCell(BalanceColumnGenerator generator, BalanceDateEntryInfo dateEntryInfo) {
+            this.generator = generator;
+            this.dateEntryInfo = dateEntryInfo;
+        }
+
+        @Override
+        public void updateItem(CellEntry item, boolean empty) {
+            super.updateItem(item, empty);            
+            
+            if ((item instanceof BalanceCellEntry) && !empty) {
+                BalanceCellEntry balanceCellEntry = (BalanceCellEntry)item;
+                
+                getStyleClass().add(STYLE_CELL);
+                getStyleClass().remove(STYLE_SUBTOTAL);
+                getStyleClass().remove(STYLE_SUMMARY);
+                getStyleClass().remove(STYLE_GRAND_TOTAL);
+                
+                getStyleClass().add(balanceCellEntry.basicStyle);
+                
+                if (balanceCellEntry.accountEntryInfo != null) {
+                    if (balanceCellEntry.rowEntry == balanceCellEntry.accountEntryInfo.accountEntry.summaryRowEntry) {
+                        getStyleClass().add(STYLE_SUMMARY);
+                    }
+                    else if (balanceCellEntry.rowEntry == balanceCellEntry.accountEntryInfo.rowEntry) {
+                        getStyleClass().add(STYLE_SUBTOTAL);
+                    }
+                }
+                else {
+                    getStyleClass().add(STYLE_GRAND_TOTAL);
+                }
+            }
+        }
     }
     
     /**
@@ -498,16 +491,11 @@ public class ReportDataView {
     protected abstract class BalanceColumnGenerator extends ColumnGenerator {
         int maxIncludedAccountDepth;
         int minIncludedAccountDepth;
+
+        final TreeMap<DateEntry, BalanceDateEntryInfo> dateEntryInfos = new TreeMap<>();
+        
         BigDecimal subTotal;
         
-        BalanceRowType getRowType(AccountEntry accountEntry) {
-            boolean isSubTotal = accountEntry.isAnyChildAccountIncluded();
-            if (accountEntry.isIncluded) {
-                return (isSubTotal) ? BalanceRowType.SUB_TOTAL_INCLUDED : BalanceRowType.VALUE;
-            }
-            return (isSubTotal) ? BalanceRowType.SUB_TOTAL_EXCLUDED : BalanceRowType.NOT_USED;
-        }
-
         @Override
         protected void setupAccountEntryRows(ReportOutput reportOutput) {
             maxIncludedAccountDepth = 0;
@@ -515,19 +503,14 @@ public class ReportDataView {
             
             super.setupAccountEntryRows(reportOutput);
         }
-        
 
         @Override
         protected void setupAccountEntryRows(AccountEntry accountEntry, ReportOutput reportOutput) {
             if (accountEntry.isIncluded) {
-                accountEntry.useAccountRowEntry(AccountRowEntry.POST_CHILD_ACCOUNT);
-
-                boolean isSubTotal = accountEntry.isAnyChildAccountIncluded();
-                if (isSubTotal) {
-                    // The spacer row after the sub-total.
-                    accountEntry.useAccountRowEntry(AccountRowEntry.POST_ACCOUNT);
+                if (accountEntry.isAnyChildAccountIncluded()) {
+                    accountEntry.useAccountRowEntry(AccountRowEntry.POST_CHILD_ACCOUNT);
                 }
-                
+
                 if (accountEntry.accountDepth > maxIncludedAccountDepth) {
                     maxIncludedAccountDepth = accountEntry.accountDepth;
                 }
@@ -539,6 +522,7 @@ public class ReportDataView {
             super.setupAccountEntryRows(accountEntry, reportOutput);
         }
 
+        
         @Override
         protected void setupDateEntryColumns(DateEntry dateEntry, AccountEntry accountEntry, ReportOutput reportOutput, int columnIndexBase) {
             if (!accountEntry.isIncluded) {
@@ -549,24 +533,92 @@ public class ReportDataView {
             BigDecimal previousSubTotal = subTotal;
             subTotal = BigDecimal.ZERO;
             try {
-                int columnOffset = maxIncludedAccountDepth - accountEntry.accountDepth;
+                //int columnOffset = maxIncludedAccountDepth - accountEntry.accountDepth;
+                int columnOffset = 0;
+                
                 final ColumnEntry columnEntry = dateEntry.getColumnEntryAtIndex(columnOffset + columnIndexBase);
-                columnEntry.tableColumn.setText(getColumnTitle(columnOffset, accountEntry, dateEntry, reportOutput));
 
                 super.setupDateEntryColumns(dateEntry, accountEntry, reportOutput, columnIndexBase);
 
-                final RowEntry rowEntry = accountEntry.getAccountRowEntry(AccountRowEntry.POST_CHILD_ACCOUNT);
+                RowEntry rowEntry = null;
+                if (accountEntry.isAnyChildAccountIncluded()) {
+                    rowEntry = accountEntry.getAccountRowEntry(AccountRowEntry.POST_CHILD_ACCOUNT);
+                }
 
                 BigDecimal balance = getInternalAccountBalance(rowEntry, columnEntry, accountEntry, dateEntry, reportOutput);
                 subTotal = subTotal.add(balance);
                 
-                updateAccountRowValue(subTotal, rowEntry, columnEntry, accountEntry, dateEntry, reportOutput);
+                BalanceDateEntryInfo dateEntryInfo = dateEntryInfos.get(dateEntry);
+                if (dateEntryInfo == null) {
+                    // First time, gotta set up the column entry.
+                    dateEntryInfo = createDateEntryInfo(accountEntry, dateEntry, columnEntry, columnIndexBase);
+                    dateEntryInfos.put(dateEntry, dateEntryInfo);
+
+                    columnEntry.treeTableColumn.setText(getColumnTitle(columnOffset, accountEntry, dateEntry, reportOutput));
+
+                    final BalanceDateEntryInfo cellDateEntryInfo = dateEntryInfo;
+                    columnEntry.treeTableColumn.setCellFactory((column) -> {
+                        return new BalanceTreeCell(this, cellDateEntryInfo);
+                    });
+                }
                 
+                BalanceAccountEntryInfo accountEntryInfo = createAccountEntryInfo(accountEntry, dateEntry, rowEntry, columnEntry, subTotal);
+                dateEntryInfo.accountEntryInfos.put(accountEntry, accountEntryInfo);
+                
+                if (accountEntry.includeDepth == 1) {
+                    dateEntryInfo.totalBalance = dateEntryInfo.totalBalance.add(subTotal);
+                }
+
             } finally {
                 if (previousSubTotal != null) {
                     previousSubTotal = previousSubTotal.add(subTotal);
                 }
                 subTotal = previousSubTotal;
+            }
+        }
+        
+        protected BalanceDateEntryInfo createDateEntryInfo(AccountEntry accountEntry, DateEntry dateEntry, ColumnEntry columnEntry, 
+                int columnIndexBase) {
+            return new BalanceDateEntryInfo(columnIndexBase);
+        }
+        
+        protected BalanceAccountEntryInfo createAccountEntryInfo(AccountEntry accountEntry, DateEntry dateEntry,
+            RowEntry rowEntry, ColumnEntry columnEntry, BigDecimal balance) {
+            return new BalanceAccountEntryInfo(accountEntry, rowEntry, columnEntry, balance);
+        }
+
+        @Override
+        protected void updateDateEntryCellValues(DateEntry dateEntry, AccountEntry accountEntry, ReportOutput reportOutput) {
+            if (accountEntry.isIncluded) {
+                BalanceDateEntryInfo dateEntryInfo = dateEntryInfos.get(dateEntry);
+                if (dateEntryInfo != null) {
+                    BalanceAccountEntryInfo accountEntryInfo = dateEntryInfo.accountEntryInfos.get(accountEntry);
+                    String value = getAccountEntryCellValue(accountEntryInfo, dateEntry, reportOutput);
+                    if (accountEntryInfo.rowEntry != null) {
+                        CellEntry cellEntry = new BalanceCellEntry(accountEntryInfo, accountEntryInfo.rowEntry, value);
+                        accountEntryInfo.rowEntry.setExpandedColumnCellValue(accountEntryInfo.columnEntry, cellEntry);
+                        accountEntryInfo.rowEntry.setNonExpandedColumnCellValue(accountEntryInfo.columnEntry, cellEntry);
+                    }
+                    
+                    if (accountEntry.summaryRowEntry != null) {
+                        CellEntry cellEntry = new BalanceCellEntry(accountEntryInfo, accountEntry.summaryRowEntry, value);
+                        accountEntry.summaryRowEntry.setNonExpandedColumnCellValue(accountEntryInfo.columnEntry, cellEntry);
+                    }
+                }
+            }
+            super.updateDateEntryCellValues(dateEntry, accountEntry, reportOutput);            
+        }
+        
+        @Override
+        protected void updateGrandTotalCellValue(DateEntry dateEntry, ReportOutput reportOutput) {
+            BalanceDateEntryInfo dateEntryInfo = dateEntryInfos.get(dateEntry);
+            if (dateEntryInfo != null) {
+                String value = getGrandTotalCellValue(dateEntryInfo, dateEntry, reportOutput);
+                if (StringUtil.isNonEmpty(value)) {
+                    ColumnEntry columnEntry = dateEntry.getColumnEntryAtIndex(dateEntryInfo.columnIndexBase);
+                    CellEntry cellEntry = new BalanceCellEntry(null, reportOutput.grandTotalRowEntry, value);
+                    reportOutput.grandTotalRowEntry.setNonExpandedColumnCellValue(columnEntry, cellEntry);
+                }
             }
         }
         
@@ -576,12 +628,14 @@ public class ReportDataView {
         
         protected BigDecimal getInternalAccountBalance(RowEntry rowEntry, ColumnEntry columnEntry, 
                 AccountEntry accountEntry, DateEntry dateEntry, ReportOutput reportOutput) {
-            return accountEntry.account.getBalance(dateEntry.dateEnd);
+            return accountEntry.account.getBalance(dateEntry.endDate);
         }
         
         
-        protected abstract void updateAccountRowValue(BigDecimal balance, RowEntry rowEntry, ColumnEntry columnEntry, 
-                AccountEntry accountEntry, DateEntry dateEntry, ReportOutput reportOutput);
+        protected abstract String getAccountEntryCellValue(BalanceAccountEntryInfo accountInfo, DateEntry dateEntry, ReportOutput reportOutput);
+        protected String getGrandTotalCellValue(BalanceDateEntryInfo dateEntryInfo, DateEntry dateEntry, ReportOutput reportOutput) {
+            return null;
+        }
     }
     
     
@@ -599,9 +653,13 @@ public class ReportDataView {
         }
 
         @Override
-        protected void updateAccountRowValue(BigDecimal balance, RowEntry rowEntry, ColumnEntry columnEntry, AccountEntry accountEntry, DateEntry dateEntry, ReportOutput reportOutput) {
-            String value = toMonetaryValueString(balance);
-            columnEntry.setRowValue(rowEntry, value);
+        protected String getAccountEntryCellValue(BalanceAccountEntryInfo accountInfo, DateEntry dateEntry, ReportOutput reportOutput) {
+            return toMonetaryValueString(accountInfo.balance, accountInfo.accountEntry.account);
+        }
+
+        @Override
+        protected String getGrandTotalCellValue(BalanceDateEntryInfo dateEntryInfo, DateEntry dateEntry, ReportOutput reportOutput) {
+            return toMonetaryValueString(dateEntryInfo.totalBalance, null);
         }
         
     }
@@ -610,10 +668,12 @@ public class ReportDataView {
 
     
     public ReportDataView() {
-        tableView = new TableView<>();
-        headingColumn = new TableColumn<>();
-        headingColumn.setCellValueFactory((TableColumn.CellDataFeatures<RowCellValues, String> param) -> {
-            return param.getValue().headingText;
+        treeTableView = new TreeTableView<>();
+        treeTableView.setShowRoot(false);
+        
+        headingColumn = new TreeTableColumn<>();
+        headingColumn.setCellValueFactory((TreeTableColumn.CellDataFeatures<RowEntry, String> param) -> {
+            return param.getValue().getValue().getRowTitle();
         });
     }
     
@@ -624,9 +684,9 @@ public class ReportDataView {
     }
     
 
-    public void shutDownTableView() {
-        this.tableView.getItems().clear();
-        this.tableView.getColumns().clear();
+    public void shutDownView() {
+        this.treeTableView.getRoot().getChildren().clear();
+        this.treeTableView.getColumns().clear();
         
         this.definition = null;
         this.engine = null;
@@ -634,10 +694,10 @@ public class ReportDataView {
     
 
     public final Control getControl() {
-        return tableView;
+        return treeTableView;
     }
     
-    public String toMonetaryValueString(BigDecimal value) {
+    public String toMonetaryValueString(BigDecimal value, Account account) {
         return value.setScale(2).toPlainString();
     }
     
@@ -661,84 +721,94 @@ public class ReportDataView {
         ReportOutput updatedReportOutput = new ReportOutput();
         updateReportOutput(updatedReportOutput);
         
-        if (!updatedReportOutput.isSimilar(currentReportOutput)) {
-            // Need to replace the columns and rows in the table view.
-            replaceAllTableCells(updatedReportOutput);
-        }
-        else {
-            // Just need to update all the cell values...
-            updateTableCellValues(updatedReportOutput);
-        }
+        updateTreeTableView(updatedReportOutput);
     }
     
     
-    protected void replaceAllTableCells(ReportOutput reportOutput) {
-        ObservableList<RowCellValues> rowValues = FXCollections.observableArrayList();
-        reportOutput.rowEntries.forEach((rowEntry) -> {
-            rowValues.add(new RowCellValues(rowEntry.rowTitle));
-        });
+    protected void updateTreeTableView(ReportOutput reportOutput) {
+        TreeItem<RowEntry> root = new TreeItem<>(new RowEntry());
         
-        tableView.getItems().clear();
-        tableView.getColumns().clear();
+        treeTableView.setRoot(root);
+        treeTableView.getColumns().clear();
         
-        tableView.getColumns().add(headingColumn);
         
-        List<TableColumn<RowCellValues, String>> columnGroup = new ArrayList<>();
+        treeTableView.getColumns().add(headingColumn);
+        
+        List<TreeTableColumn<RowEntry, CellEntry>> columnGroup = new ArrayList<>();
         reportOutput.dateEntries.forEach((dateEntry) -> {
             columnGroup.clear();
             dateEntry.columnEntries.forEach((columnEntry) -> {
-                if (columnEntry.tableColumn != null) {
-                    columnGroup.add(columnEntry.tableColumn);
+                if (columnEntry.treeTableColumn != null) {
+                    columnGroup.add(columnEntry.treeTableColumn);
                 }
             });
             
-            TableColumn<RowCellValues, String> dateColumn;
+            TreeTableColumn<RowEntry, CellEntry> dateColumn;
             if (columnGroup.size() == 1) {
                 // Single column, it's going to be the date column.
                 dateColumn = columnGroup.get(0);
             }
             else {
-                dateColumn = new TableColumn<>();
+                dateColumn = new TreeTableColumn<>();
                 dateColumn.getColumns().addAll(columnGroup);
             }
             
             dateColumn.setText(getDateColumnLabel(dateEntry));
             
-            tableView.getColumns().add(dateColumn);
+            treeTableView.getColumns().add(dateColumn);
         });
         
-        tableView.setItems(rowValues);
         
-        updateTableCellValues(reportOutput);
-    }
-    
-
-    protected String getDateColumnLabel(DateEntry dateEntry) {
-        String endDateString = dateEntry.dateEnd.format(columnDateTimeFormatter);
-        if (dateEntry.dateStart.equals(dateEntry.dateEnd)) {
-            return endDateString;
+        // Add the rows...
+        reportOutput.accountEntries.forEach((accountEntry) -> {
+            addRowsForAccountEntry(root, accountEntry);
+        });
+        
+        if (reportOutput.grandTotalRowEntry != null) {
+            TreeItem<RowEntry> treeItem = new TreeItem<>(reportOutput.grandTotalRowEntry);
+            root.getChildren().add(treeItem);
         }
-
-        String startDateString = dateEntry.dateStart.format(columnDateTimeFormatter);
-        return ResourceSource.getString("Report.ColumnHeading.StartEndDate", startDateString, endDateString);
-    }
-
-    
-    protected void updateTableCellValues(ReportOutput reportOutput) {
-        reportOutput.columnEntries.forEach((columnEntry) -> {
-            final int rowCount = columnEntry.rowValues.size();
-            for (int i = 0; i < rowCount; ++i) {
-                String value = columnEntry.rowValues.get(i);
-                if (value != null) {
-                    tableView.getItems().get(i).setColumnValue(columnEntry.columnIndex, value);
-                }
-            }
-        });
         
         this.currentReportOutput = reportOutput;
     }
     
+    protected void addRowsForAccountEntry(TreeItem<RowEntry> parent, AccountEntry accountEntry) {
+        if (accountEntry.summaryRowEntry != null) {
+            TreeItem<RowEntry> treeItem = new TreeItem<>(accountEntry.summaryRowEntry);
+            parent.getChildren().add(treeItem);
+            parent = treeItem;
+        }
+        
+        addRowEntryIfNotNull(parent, accountEntry, AccountRowEntry.PRE_ACCOUNT);
+        addRowEntryIfNotNull(parent, accountEntry, AccountRowEntry.PRE_CHILD_ACCOUNT);
+        
+        final TreeItem<RowEntry> itemForChildren = parent;
+        accountEntry.childAccountEntries.forEach((childAccountEntry) -> {
+            addRowsForAccountEntry(itemForChildren, childAccountEntry);
+        });
 
+        addRowEntryIfNotNull(parent, accountEntry, AccountRowEntry.POST_CHILD_ACCOUNT);
+        addRowEntryIfNotNull(parent, accountEntry, AccountRowEntry.POST_ACCOUNT);
+    }
+    
+    protected void addRowEntryIfNotNull(TreeItem<RowEntry> parent, AccountEntry accountEntry, AccountRowEntry accountRowEntry) {
+        RowEntry rowEntry = accountEntry.getAccountRowEntry(accountRowEntry);
+        if (rowEntry != null) {
+            parent.getChildren().add(new TreeItem<>(rowEntry));
+        }
+    }
+    
+    protected String getDateColumnLabel(DateEntry dateEntry) {
+        String endDateString = dateEntry.endDate.format(columnDateTimeFormatter);
+        if (dateEntry.startDate.equals(dateEntry.endDate)) {
+            return endDateString;
+        }
+
+        String startDateString = dateEntry.startDate.format(columnDateTimeFormatter);
+        return ResourceSource.getString("Report.ColumnHeading.StartEndDate", startDateString, endDateString);
+    }
+
+    
     protected void updateReportOutput(ReportOutput reportOutput) {
         createAccountEntries(reportOutput);
         createDateEntries(reportOutput);
@@ -775,6 +845,12 @@ public class ReportDataView {
             AccountGroup accountGroup = accountsByGroup.keySet().iterator().next();
             processAccountEntries(accountGroup, accountsByGroup, filter, reportOutput);
         }
+        
+        String grandTotalText = this.definition.getGrandTotalText();
+        if (StringUtil.isNonEmpty(grandTotalText)) {
+            reportOutput.grandTotalRowEntry = new RowEntry();
+            reportOutput.grandTotalRowEntry.setRowTitle(grandTotalText);
+        }
     }
     
     
@@ -788,7 +864,7 @@ public class ReportDataView {
         
         accounts.forEach((account) -> {
             boolean isIncluded = filter.isIncludeAccount(account);
-            AccountEntry accountEntry = new AccountEntry(account, isIncluded);
+            AccountEntry accountEntry = new AccountEntry(account, isIncluded, null);
             reportOutput.accountEntries.add(accountEntry);
             
             addChildAccountEntries(accountEntry, filter, reportOutput);
@@ -799,7 +875,7 @@ public class ReportDataView {
     protected void addChildAccountEntries(AccountEntry accountEntry, AccountFilter filter, ReportOutput reportOutput) {
         accountEntry.account.getChildren().forEach((account) -> {
             boolean isIncluded = filter.isIncludeAccount(account);
-            AccountEntry childAccountEntry = new AccountEntry(account, isIncluded);
+            AccountEntry childAccountEntry = new AccountEntry(account, isIncluded, accountEntry);
             accountEntry.childAccountEntries.add(childAccountEntry);
             
             addChildAccountEntries(childAccountEntry, filter, reportOutput);
@@ -860,28 +936,9 @@ public class ReportDataView {
 
     
     private void processAccountEntries(ReportOutput reportOutput) {
-        reportOutput.rowEntries.clear();
-        
         reportOutput.columnGenerators.forEach((generator) -> {
             generator.setupAccountEntryRows(reportOutput);
         });
-        
-        reportOutput.accountEntries.forEach((acountEntry) -> {
-            addAccountEntryRowsToReportOutput(acountEntry, reportOutput);
-        });
-    }
-    
-    
-    private void addAccountEntryRowsToReportOutput(AccountEntry accountEntry, ReportOutput reportOutput) {
-        reportOutput.addRowEntryIfNotNull(accountEntry.getAccountRowEntry(AccountRowEntry.PRE_ACCOUNT));
-        reportOutput.addRowEntryIfNotNull(accountEntry.getAccountRowEntry(AccountRowEntry.PRE_CHILD_ACCOUNT));
-        
-        accountEntry.childAccountEntries.forEach((childAccountEntry) -> {
-            addAccountEntryRowsToReportOutput(childAccountEntry, reportOutput);
-        });
-
-        reportOutput.addRowEntryIfNotNull(accountEntry.getAccountRowEntry(AccountRowEntry.POST_CHILD_ACCOUNT));
-        reportOutput.addRowEntryIfNotNull(accountEntry.getAccountRowEntry(AccountRowEntry.POST_ACCOUNT));
     }
 
     
@@ -892,10 +949,15 @@ public class ReportDataView {
             generator.setupDateEntryColumns(reportOutput);
         });
         
-        reportOutput.dateEntries.forEach((dateEntry) -> {
+        reportOutput.dateEntries.forEach((dateEntry)-> {
             dateEntry.columnEntries.forEach((columnEntry) -> {
-                reportOutput.addColumnEntryIfNotNull(columnEntry);
+                columnEntry.columnIndex = reportOutput.columnEntries.size();
+                reportOutput.columnEntries.add(columnEntry);
             });
+        });
+        
+        reportOutput.columnGenerators.forEach((generator) -> {
+            generator.updateCellValues(reportOutput);
         });
     }
 }

@@ -100,6 +100,18 @@ public class ReportDefinition extends CompositeObservable {
     }
     
     
+    private final StringProperty grandTotalText = new SimpleStringProperty(this, "grandTotalText");
+    public final StringProperty grandTotalTextProperty() {
+        return grandTotalText;
+    }
+    public final String getGrandTotalText() {
+        return grandTotalText.get();
+    }
+    public final void setGrandTotalText(String text) {
+        grandTotalText.set(text);
+    }
+    
+    
     protected void markModified() {
         fireInvalidationListeners();
     }
@@ -124,6 +136,9 @@ public class ReportDefinition extends CompositeObservable {
         columnTypes.addListener((ListChangeListener.Change<? extends ColumnType> c) -> {
             markModified();
         });
+        grandTotalText.addListener((property, oldValue, newValue) -> {
+            markModified();
+        });
     }
     
     
@@ -141,6 +156,8 @@ public class ReportDefinition extends CompositeObservable {
             
             this.getColumnTypes().clear();
             this.getColumnTypes().addAll(other.getColumnTypes());
+            
+            this.setGrandTotalText(other.getGrandTotalText());
         }
     }
     
@@ -250,6 +267,8 @@ public class ReportDefinition extends CompositeObservable {
         definition.getAccountFilter().getAccountGroupsToInclude().add(AccountGroup.LIABILITY);
         definition.getColumnTypes().add(ColumnType.VALUE);
         
+        definition.setGrandTotalText(ResourceSource.getString("Report.GrandTotal.NetWorth"));
+        
         return definition;
     }
     
@@ -264,6 +283,7 @@ public class ReportDefinition extends CompositeObservable {
         definition.getAccountFilter().getAccountGroupsToInclude().add(AccountGroup.EXPENSE);
         definition.getColumnTypes().add(ColumnType.VALUE);
         
+        definition.setGrandTotalText(ResourceSource.getString("Report.GrandTotal.IncomeExpense"));
         return definition;
     }
     
@@ -300,6 +320,7 @@ public class ReportDefinition extends CompositeObservable {
         jsonObject.add("columnTypes", JSONLite.toJSONValue(definition.getColumnTypes(), (item) -> {
             return new JSONValue(item);
         }));
+        jsonObject.add("grandTotalText", definition.getGrandTotalText());
         return jsonObject;
     }
     
@@ -324,6 +345,8 @@ public class ReportDefinition extends CompositeObservable {
         JSONLite.fillFromJSONValue(jsonObject.getValue("columnTypes"), definition.getColumnTypes(), (jsonValue) -> {
             return jsonValue.getEnumValue(ColumnType.values());
         });
+        
+        jsonObject.callIfValue("grandTotalText", (jsonValue) -> { definition.setGrandTotalText(jsonValue.getStringValue()); });
         
         return definition;
     }
