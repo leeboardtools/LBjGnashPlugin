@@ -218,11 +218,11 @@ public class PeriodicDateGeneratorViewController implements Initializable {
             endDateOffset = new DateOffset.Basic(DateOffset.Interval.DAY, deltaDays, DateOffset.IntervalRelation.CURRENT_DAY);
         }
 
-        int periodIncrementOffset = Integer.parseInt(everyCountEdit.getText());
+        int periodIncrementOffset = -Integer.parseInt(everyCountEdit.getText());
         DateOffset.Interval periodInterval = everyIntervalChoice.getValue();
         DateOffset.Basic periodDateOffset = new DateOffset.Basic(periodInterval, periodIncrementOffset, DateOffset.IntervalRelation.CURRENT_DAY);
         
-        return new PeriodicDateGenerator(startDateOffset, periodDateOffset, periodCount, periodDateOffset);
+        return new PeriodicDateGenerator(startDateOffset, periodDateOffset, periodCount, endDateOffset);
     }
 
     private void setupStartDateOffset(DateOffset.Basic startDateOffset) {
@@ -265,7 +265,7 @@ public class PeriodicDateGeneratorViewController implements Initializable {
 
     private void setupRepeatPeriod(PeriodicDateGenerator generator) {
         DateOffset.Basic periodDateOffset = generator.getPeriodDateOffset();
-        everyCountEdit.setText(Integer.toString(periodDateOffset.getIntervalOffset()));
+        everyCountEdit.setText(Integer.toString(-periodDateOffset.getIntervalOffset()));
         everyIntervalChoice.setValue(periodDateOffset.getInterval());
     }
 

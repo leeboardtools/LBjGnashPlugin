@@ -54,6 +54,7 @@ public class ReportDataView {
     
     // TODO: Move this to ReportDefinition.
     protected DateTimeFormatter columnDateTimeFormatter = DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT);
+    protected String percentSuffix = "%";
     
     protected TreeTableColumn<RowEntry, String> headingColumn;
     
@@ -382,13 +383,16 @@ public class ReportDataView {
         
         protected void updateCellValues(ReportOutput reportOutput) {
             reportOutput.dateEntries.forEach((dateEntry) -> {
-                reportOutput.accountEntries.forEach((accountEntry) -> {
-                    updateDateEntryCellValues(dateEntry, accountEntry, reportOutput);
-                });
-                
                 if (reportOutput.grandTotalRowEntry != null) {
+                    updateDateEntryCellValues(dateEntry, reportOutput);
                     updateGrandTotalCellValue(dateEntry, reportOutput);
                 }
+            });
+        }
+        
+        protected void updateDateEntryCellValues(DateEntry dateEntry, ReportOutput reportOutput) {
+            reportOutput.accountEntries.forEach((accountEntry) -> {
+                updateDateEntryCellValues(dateEntry, accountEntry, reportOutput);
             });
         }
 
@@ -484,6 +488,14 @@ public class ReportDataView {
             }
         }
     }
+    
+
+    public static enum ReferencePeriodType {
+        PREVIOUS,
+        OLDEST,
+        NEWEST,
+    }
+    
     
     /**
      * Abstract class for the report columns that work off the standard account balance.
@@ -633,8 +645,31 @@ public class ReportDataView {
         
         
         protected abstract String getAccountEntryCellValue(BalanceAccountEntryInfo accountInfo, DateEntry dateEntry, ReportOutput reportOutput);
+
         protected String getGrandTotalCellValue(BalanceDateEntryInfo dateEntryInfo, DateEntry dateEntry, ReportOutput reportOutput) {
             return null;
+        }
+        
+        
+        protected BalanceDateEntryInfo getReferenceDateEntryInfo(DateEntry dateEntry, ReferencePeriodType periodType) {
+            switch (periodType) {
+                case PREVIOUS:
+                    Map.Entry<DateEntry, BalanceDateEntryInfo> entry = dateEntryInfos.lowerEntry(dateEntry);
+                    if (entry == null) {
+                        entry = dateEntryInfos.firstEntry();
+                    }
+                    return entry.getValue();
+                    
+                case NEWEST:
+                    return dateEntryInfos.lastEntry().getValue();
+                    
+                case OLDEST:
+                    return dateEntryInfos.firstEntry().getValue();
+                    
+                default:
+                    throw new AssertionError(periodType.name());
+                
+            }
         }
     }
     
@@ -665,6 +700,110 @@ public class ReportDataView {
     }
     
     
+    /**
+     * Reports the change in current balance from the previous period's balance.
+     */
+    protected class DeltaPeriodColumnGenerator extends BalanceColumnGenerator {
+        protected final ReferencePeriodType referencePeriodType;
+        
+        protected DeltaPeriodColumnGenerator(ReferencePeriodType referencePeriodType) {
+            this.referencePeriodType = referencePeriodType;
+        }
+        
+        @Override
+        protected String getColumnTitle(int columnOffset, AccountEntry accountEntry, DateEntry dateEntry, ReportOutput reportOutput) {
+            if (columnOffset == 0) {
+                return ResourceSource.getString("Report.ColumnHeading.DeltaPreviousPeriod");
+            }
+            return "";
+        }
+
+        @Override
+        protected String getAccountEntryCellValue(BalanceAccountEntryInfo accountInfo, DateEntry dateEntry, ReportOutput reportOutput) {
+            BalanceDateEntryInfo dateEntryInfo = dateEntryInfos.get(dateEntry);
+            BalanceDateEntryInfo refDateEntryInfo = getReferenceDateEntryInfo(dateEntry, referencePeriodType);
+            if (dateEntryInfo == refDateEntryInfo) {
+                return getBaselineAccountEntryCellValue(accountInfo, dateEntry, reportOutput);
+            }
+            
+            if ((dateEntryInfo != null) && (refDateEntryInfo != null)) {
+                BalanceAccountEntryInfo refAccountInfo = refDateEntryInfo.accountEntryInfos.get(accountInfo.accountEntry);
+                if (refAccountInfo != null) {
+                    return getDeltaAccountEntryCellValue(accountInfo, refAccountInfo, dateEntryInfo, refDateEntryInfo, reportOutput);
+                }
+            }
+            return "-";
+        }
+
+        @Override
+        protected String getGrandTotalCellValue(BalanceDateEntryInfo dateEntryInfo, DateEntry dateEntry, ReportOutput reportOutput) {
+            BalanceDateEntryInfo refDateEntryInfo = getReferenceDateEntryInfo(dateEntry, referencePeriodType);
+            if (dateEntryInfo == refDateEntryInfo) {
+                return getBaselineGrandTotalCellValue(dateEntryInfo, dateEntry, reportOutput);
+            }
+            
+            if ((dateEntryInfo != null) && (refDateEntryInfo != null)) {
+                return getDeltaGrandTotalCellValue(dateEntryInfo, refDateEntryInfo, reportOutput);
+            }
+            return null;
+        }
+        
+        protected String getBaselineAccountEntryCellValue(BalanceAccountEntryInfo accountInfo, DateEntry dateEntry, ReportOutput reportOutput) {
+            return toMonetaryValueString(accountInfo.balance, accountInfo.accountEntry.account);
+        }
+        
+        protected String getBaselineGrandTotalCellValue(BalanceDateEntryInfo dateEntryInfo, DateEntry dateEntry, ReportOutput reportOutput) {
+            return toMonetaryValueString(dateEntryInfo.totalBalance, null);
+        }
+        
+        protected String getDeltaAccountEntryCellValue(BalanceAccountEntryInfo accountInfo, BalanceAccountEntryInfo refAccountInfo,
+            BalanceDateEntryInfo dateEntryInfo, BalanceDateEntryInfo refDateEntryInfo, ReportOutput reportOutput) {
+            if (accountInfo == refAccountInfo) {
+                return null;
+            }
+            
+            BigDecimal balance = accountInfo.balance.subtract(refAccountInfo.balance);
+            return toMonetaryValueString(balance, accountInfo.accountEntry.account);
+        }
+        
+        protected String getDeltaGrandTotalCellValue(BalanceDateEntryInfo dateEntryInfo, BalanceDateEntryInfo refDateEntryInfo, 
+            ReportOutput reportOutput) {
+            if (dateEntryInfo == refDateEntryInfo) {
+                return null;
+            }
+            
+            BigDecimal totalBalance = dateEntryInfo.totalBalance.subtract(refDateEntryInfo.totalBalance);
+            return toMonetaryValueString(totalBalance, null);
+        }
+    }
+    
+    protected class PercentDeltaPeriodColumnGenerator extends DeltaPeriodColumnGenerator {
+        public PercentDeltaPeriodColumnGenerator(ReferencePeriodType referencePeriodType) {
+            super(referencePeriodType);
+        }
+        
+        @Override
+        protected String getDeltaAccountEntryCellValue(BalanceAccountEntryInfo accountInfo, BalanceAccountEntryInfo refAccountInfo,
+            BalanceDateEntryInfo dateEntryInfo, BalanceDateEntryInfo refDateEntryInfo, ReportOutput reportOutput) {
+            if (accountInfo == refAccountInfo) {
+                return null;
+            }
+            
+            BigDecimal balance = accountInfo.balance.subtract(refAccountInfo.balance);
+            return toPercentString(balance, refAccountInfo.balance);
+        }
+        
+        @Override
+        protected String getDeltaGrandTotalCellValue(BalanceDateEntryInfo dateEntryInfo, BalanceDateEntryInfo refDateEntryInfo, 
+            ReportOutput reportOutput) {
+            if (dateEntryInfo == refDateEntryInfo) {
+                return null;
+            }
+            
+            BigDecimal totalBalance = dateEntryInfo.totalBalance.subtract(refDateEntryInfo.totalBalance);
+            return toPercentString(totalBalance, refDateEntryInfo.totalBalance);
+        }
+    }
 
     
     public ReportDataView() {
@@ -705,7 +844,7 @@ public class ReportDataView {
         numerator = numerator.multiply(ONE_HUNDRED).setScale(1);
         try {
             BigDecimal value = numerator.divide(denominator, RoundingMode.HALF_UP);
-            return value.toPlainString();
+            return value.toPlainString() + percentSuffix;
         } catch (ArithmeticException ex) {
             return "-";
         }
@@ -883,7 +1022,9 @@ public class ReportDataView {
     }
     
     protected void createDateEntries(ReportOutput reportOutput) {
-        Iterator<LocalDate> dateIterator = this.definition.getDateGenerator().getIterator(LocalDate.now());
+        TreeSet<LocalDate> sortedDates = new TreeSet<>();
+        this.definition.getDateGenerator().getPeriodicDates(LocalDate.now(), sortedDates);
+        Iterator<LocalDate> dateIterator = sortedDates.iterator();
         while (dateIterator.hasNext()) {
             LocalDate endDate = dateIterator.next();
             LocalDate startDate = endDate;
@@ -912,13 +1053,13 @@ public class ReportDataView {
             case VALUE:
                 return new ValueColumnGenerator();
             case DELTA_PREVIOUS_PERIOD:
-                break;
+                return new DeltaPeriodColumnGenerator(ReferencePeriodType.PREVIOUS);
             case DELTA_OLDEST_PERIOD:
-                break;
+                return new DeltaPeriodColumnGenerator(ReferencePeriodType.OLDEST);
             case PERCENT_DELTA_PREVIOUS_PERIOD:
-                break;
+                return new PercentDeltaPeriodColumnGenerator(ReferencePeriodType.PREVIOUS);
             case PERCENT_DELTA_OLDEST_PERIOD:
-                break;
+                return new PercentDeltaPeriodColumnGenerator(ReferencePeriodType.OLDEST);
             case COST_BASIS:
                 break;
             case GAIN:

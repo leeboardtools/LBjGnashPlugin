@@ -19,6 +19,7 @@ import com.leeboardtools.json.JSONLite;
 import com.leeboardtools.json.JSONObject;
 import com.leeboardtools.json.JSONValue;
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.Objects;
@@ -130,6 +131,19 @@ public class PeriodicDateGenerator {
         }
         else {
             return new EndDateIterator(refDate);
+        }
+    }
+    
+    
+    /**
+     * Populates a collection with the periodic dates.
+     * @param refDate   The reference date.
+     * @param dates The collection to be populated. The collection is not cleared...
+     */
+    public void getPeriodicDates(LocalDate refDate, Collection<LocalDate> dates) {
+        Iterator<LocalDate> iterator = getIterator(refDate);
+        while (iterator.hasNext()) {
+            dates.add(iterator.next());
         }
     }
 
