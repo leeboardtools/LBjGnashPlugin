@@ -15,6 +15,7 @@
  */
 package lbjgnash.ui;
 
+import lbjgnash.ui.reportview.ReportDataView;
 import com.leeboardtools.util.StringUtil;
 import java.util.ArrayList;
 import java.util.Collections;
