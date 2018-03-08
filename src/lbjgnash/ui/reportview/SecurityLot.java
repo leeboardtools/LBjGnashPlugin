@@ -121,6 +121,22 @@ public class SecurityLot implements Comparable<SecurityLot> {
             remainingShares, remainingCostBasis, this.costBasisDate);
     }
     
+    /**
+     * Adjusts the shares by a ratio of shares in to shares out.
+     * @param date  The date to assign to the lot.
+     * @param sharesIn  The denominator of the scaling ratio.
+     * @param sharesOut The numerator of the scaling ratio.
+     * @return The security lot, which is <code>this</code> if sharesIn is equal to sharesOut.
+     */
+    public final SecurityLot scaleShares(LocalDate date, BigDecimal sharesIn, BigDecimal sharesOut) {
+        if (sharesIn.equals(sharesOut)) {
+            return this;
+        }
+        
+        BigDecimal newShares = this.shares.multiply(sharesOut).divide(sharesIn, RoundingMode.HALF_UP);
+        return new SecurityLot(SecurityLot.makeLotId(), date, newShares, this.costBasis, this.costBasisDate);
+    }
+    
     
     @Override
     public int compareTo(SecurityLot o) {

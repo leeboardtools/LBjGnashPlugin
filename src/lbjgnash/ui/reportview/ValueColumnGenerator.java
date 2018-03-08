@@ -31,12 +31,12 @@ class ValueColumnGenerator extends BalanceColumnGenerator {
     }
 
     @Override
-    protected String getAccountEntryCellValue(ReportDataView.BalanceAccountEntryInfo accountInfo, ReportDataView.DateEntry dateEntry, ReportDataView.ReportOutput reportOutput) {
+    protected String getAccountEntryCellValue(BalanceAccountEntryInfo accountInfo, ReportDataView.DateEntry dateEntry, ReportDataView.ReportOutput reportOutput) {
         return reportOutput.toMonetaryValueString(accountInfo.balance, accountInfo.accountEntry.account);
     }
 
     @Override
-    protected String getGrandTotalCellValue(ReportDataView.BalanceDateEntryInfo dateEntryInfo, ReportDataView.DateEntry dateEntry, ReportDataView.ReportOutput reportOutput) {
+    protected String getGrandTotalCellValue(BalanceDateEntryInfo dateEntryInfo, ReportDataView.DateEntry dateEntry, ReportDataView.ReportOutput reportOutput) {
         return reportOutput.toMonetaryValueString(dateEntryInfo.totalBalance, null);
     }
     

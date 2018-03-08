@@ -93,7 +93,22 @@ public interface SecurityLotAction {
         }
     }
     
-    
-    // TODO: Need a stock-split/merge action. Need to figure out what exactly needs
-    // to happen for that.
+        
+    public static class ScaleShares implements SecurityLotAction {
+        private final LocalDate date;
+        private final BigDecimal sharesIn;
+        private final BigDecimal sharesOut;
+        
+        public ScaleShares(LocalDate date, BigDecimal sharesIn, BigDecimal sharesOut) {
+            this.date = date;
+            this.sharesIn = sharesIn;
+            this.sharesOut = sharesOut;
+        }
+
+        @Override
+        public SecurityLots applyAction(SecurityLots securityLots) {
+            return securityLots.scaleShares(date, sharesIn, sharesOut);
+        }
+    }
+        
 }

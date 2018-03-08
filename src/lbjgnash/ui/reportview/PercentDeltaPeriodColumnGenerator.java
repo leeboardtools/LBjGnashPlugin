@@ -28,7 +28,7 @@ class PercentDeltaPeriodColumnGenerator extends DeltaPeriodColumnGenerator {
     }
 
     @Override
-    protected String getDeltaAccountEntryCellValue(ReportDataView.BalanceAccountEntryInfo accountInfo, ReportDataView.BalanceAccountEntryInfo refAccountInfo, ReportDataView.BalanceDateEntryInfo dateEntryInfo, ReportDataView.BalanceDateEntryInfo refDateEntryInfo, ReportDataView.ReportOutput reportOutput) {
+    protected String getDeltaAccountEntryCellValue(BalanceAccountEntryInfo accountInfo, BalanceAccountEntryInfo refAccountInfo, BalanceDateEntryInfo dateEntryInfo, BalanceDateEntryInfo refDateEntryInfo, ReportDataView.ReportOutput reportOutput) {
         if (accountInfo == refAccountInfo) {
             return null;
         }
@@ -37,7 +37,7 @@ class PercentDeltaPeriodColumnGenerator extends DeltaPeriodColumnGenerator {
     }
 
     @Override
-    protected String getDeltaGrandTotalCellValue(ReportDataView.BalanceDateEntryInfo dateEntryInfo, ReportDataView.BalanceDateEntryInfo refDateEntryInfo, ReportDataView.ReportOutput reportOutput) {
+    protected String getDeltaGrandTotalCellValue(BalanceDateEntryInfo dateEntryInfo, BalanceDateEntryInfo refDateEntryInfo, ReportDataView.ReportOutput reportOutput) {
         if (dateEntryInfo == refDateEntryInfo) {
             return null;
         }

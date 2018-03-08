@@ -60,6 +60,26 @@ public class SecurityLotTest {
     }
 
     @Test
+    public void testScaleShares() {
+        System.out.println("scaleShares");
+                
+        BigDecimal price = new BigDecimal(20);
+        BigDecimal shares = new BigDecimal(100);
+        BigDecimal costBasis = shares.multiply(price);
+        
+        SecurityLot lotA = new SecurityLot("Abc", LocalDate.of(2017,3,21), shares, costBasis, null);
+        
+        SecurityLot lotB = lotA.scaleShares(LocalDate.of(2018, 3, 4), new BigDecimal(2), new BigDecimal(3));
+        assertEquals(costBasis, lotB.getCostBasis());
+        assertEquals(new BigDecimal(150), lotB.getShares());
+        assertEquals(LocalDate.of(2017,3,21), lotB.getCostBasisDate());
+        assertEquals(LocalDate.of(2018,3,4), lotB.getDate());
+        
+        lotB = lotA.scaleShares(LocalDate.of(2018, 3, 4), new BigDecimal(5), new BigDecimal(2));
+        assertEquals(new BigDecimal(40), lotB.getShares());
+    }
+
+    @Test
     public void testCompareTo() {
         System.out.println("compareTo");
         String id = "Abc";

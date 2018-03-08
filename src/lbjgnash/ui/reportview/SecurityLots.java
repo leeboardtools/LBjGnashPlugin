@@ -34,6 +34,9 @@ import java.util.TreeSet;
 public class SecurityLots {
     private final TreeSet<SecurityLot> securityLots;
     private final SortedSet<SecurityLot> readOnlySecurityLots;
+    private BigDecimal totalShares;
+    private BigDecimal totalCostBasis;
+    
     
     /**
      * Constructor.
@@ -46,12 +49,62 @@ public class SecurityLots {
         this.readOnlySecurityLots = Collections.unmodifiableSortedSet(this.securityLots);
     }
     
+    
+    /**
+     * Constructor.
+     * @param securityLot The security lot.
+     */
+    public SecurityLots(SecurityLot securityLot) {
+        this.securityLots = new TreeSet<>();
+        if (securityLot != null) {
+            this.securityLots.add(securityLot);
+        }
+        this.readOnlySecurityLots = Collections.unmodifiableSortedSet(this.securityLots);
+    }
+    
+    
+    /**
+     * Constructor.
+     */
+    public SecurityLots() {
+        this((SecurityLot)null);
+    }
+    
+    
     /**
      * @return An un-modifiable sorted set containing the security lots.
      */
     public final SortedSet<SecurityLot> getSecurityLots() {
         return readOnlySecurityLots;
     }
+    
+    /**
+     * @return The total number of shares.
+     */
+    public final BigDecimal getTotalShares() {
+        useTotals();
+        return totalShares;
+    }
+    
+    /**
+     * @return The total cost basis.
+     */
+    public final BigDecimal getTotalCostBasis() {
+        useTotals();
+        return totalCostBasis;
+    }
+    
+    protected void useTotals() {
+        if (totalShares == null) {
+            totalShares = BigDecimal.ZERO;
+            totalCostBasis = BigDecimal.ZERO;
+            securityLots.forEach((securityLot) -> {
+                totalShares = totalShares.add(securityLot.getShares());
+                totalCostBasis = totalCostBasis.add(securityLot.getCostBasis());
+            });
+        }
+    }
+    
     
     /**
      * Retrieves a new {@link SecurityLots} that has a given number of shares removed
@@ -209,4 +262,30 @@ public class SecurityLots {
         
         return new SecurityLots(newLots);
     }
+    
+    
+    /**
+     * Applies a ratio to the shares of all the lots. The ratio is defined by a number
+     * of shares out per number of shares in.
+     * @param date  The date to apply to the new security lots.
+     * @param sharesIn  The number of shares in of the ratio.
+     * @param sharesOut The number of shares out of the ratio.
+     * @return The new security lots, <code>this</code> if sharesIn is equal to sharesOut.
+     */
+    public SecurityLots scaleShares(LocalDate date, BigDecimal sharesIn, BigDecimal sharesOut) {
+        if (sharesIn.equals(sharesOut)) {
+            return this;
+        }
+        
+        Iterator<SecurityLot> iterator = securityLots.iterator();
+
+        List<SecurityLot> newLots = new ArrayList<>();
+        while (iterator.hasNext()) {
+            SecurityLot oldLot = iterator.next();
+            newLots.add(oldLot.scaleShares(date, sharesIn, sharesOut));
+        }
+        
+        return new SecurityLots(newLots);
+    }
+    
 }

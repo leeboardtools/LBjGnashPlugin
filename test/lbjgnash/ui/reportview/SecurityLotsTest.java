@@ -171,5 +171,41 @@ public class SecurityLotsTest {
         securityLots = securityLotsA.removeLotShares(LocalDate.of(2017,1,2), Arrays.asList(sharesC));
         checkSecurityLots(refLotsC, securityLots);
     }
-    
+
+    @Test
+    public void testScaleShares() {
+        System.out.println("scaleLotShares");
+        
+        SecurityLot.nextLotId = 1;
+        
+        SecurityLot refLotsA[] = {
+            new SecurityLot("A", LocalDate.of(2017,1,2), new BigDecimal(100), new BigDecimal(1000), LocalDate.of(2017,1,2)),
+            new SecurityLot("B", LocalDate.of(2017,1,2), new BigDecimal(200), new BigDecimal(2000), LocalDate.of(2017,1,3)),
+            new SecurityLot("C", LocalDate.of(2017,1,2), new BigDecimal(300), new BigDecimal(3000), LocalDate.of(2017,1,4)),
+            new SecurityLot("D", LocalDate.of(2017,1,2), new BigDecimal(300), new BigDecimal(3000), LocalDate.of(2017,1,5)),
+        };
+        SecurityLots securityLotsA = new SecurityLots(Arrays.asList(refLotsA));
+        checkSecurityLots(refLotsA, securityLotsA);
+
+        SecurityLots securityLots;
+
+        SecurityLot refLotsB[] = {
+            new SecurityLot("1", LocalDate.of(2017,1,2), new BigDecimal(300), new BigDecimal(1000), LocalDate.of(2017,1,2)),
+            new SecurityLot("2", LocalDate.of(2017,1,2), new BigDecimal(600), new BigDecimal(2000), LocalDate.of(2017,1,3)),
+            new SecurityLot("3", LocalDate.of(2017,1,2), new BigDecimal(900), new BigDecimal(3000), LocalDate.of(2017,1,4)),
+            new SecurityLot("4", LocalDate.of(2017,1,2), new BigDecimal(900), new BigDecimal(3000), LocalDate.of(2017,1,5)),
+        };
+        securityLots = securityLotsA.scaleShares(LocalDate.of(2017,1,2), new BigDecimal(1), new BigDecimal(3));
+        checkSecurityLots(refLotsB, securityLots);
+
+        SecurityLot refLotsC[] = {
+            new SecurityLot("5", LocalDate.of(2018,1,2), new BigDecimal(150), new BigDecimal(1000), LocalDate.of(2017,1,2)),
+            new SecurityLot("6", LocalDate.of(2018,1,2), new BigDecimal(300), new BigDecimal(2000), LocalDate.of(2017,1,3)),
+            new SecurityLot("7", LocalDate.of(2018,1,2), new BigDecimal(450), new BigDecimal(3000), LocalDate.of(2017,1,4)),
+            new SecurityLot("8", LocalDate.of(2018,1,2), new BigDecimal(450), new BigDecimal(3000), LocalDate.of(2017,1,5)),
+        };
+        securityLots = securityLotsA.scaleShares(LocalDate.of(2018,1,2), new BigDecimal(2), new BigDecimal(3));
+        checkSecurityLots(refLotsC, securityLots);
+
+    }
 }

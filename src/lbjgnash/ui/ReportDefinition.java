@@ -197,6 +197,9 @@ public class ReportDefinition extends CompositeObservable {
     
     
     
+    // TODO Columns to add:
+    // annual rate of return
+    // percent total portfolio
     
     public static enum ColumnType {
         VALUE("ReportDefinition.ColumnType.Value"),
@@ -208,6 +211,7 @@ public class ReportDefinition extends CompositeObservable {
         GAIN("ReportDefinition.ColumnType.Gain"),
         QUANTITY("ReportDefinition.ColumnType.Quantity"),
         PRICE("ReportDefinition.ColumnType.Price"),
+        PERCENT_PORTFOLIO("ReportDefinition.ColumnType.PercentPortfolio"),
         ;
         
         private final String stringResourceId;
@@ -300,6 +304,7 @@ public class ReportDefinition extends CompositeObservable {
         definition.getColumnTypes().add(ColumnType.COST_BASIS);
         definition.getColumnTypes().add(ColumnType.GAIN);
         definition.getColumnTypes().add(ColumnType.VALUE);
+        definition.getColumnTypes().add(ColumnType.PERCENT_PORTFOLIO);
         
         return definition;
     }

@@ -37,7 +37,6 @@ import javafx.scene.control.Control;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTableView;
-import javafx.scene.control.cell.TextFieldTreeTableCell;
 import jgnash.engine.Account;
 import jgnash.engine.AccountGroup;
 import jgnash.engine.Engine;
@@ -69,26 +68,6 @@ public class ReportDataView {
     public static final String STYLE_BALANCE_VALUE      = "report-cell-balance-value";
     public static final String STYLE_GRAND_TOTAL    = "report-cell-grand-total";
 
-    //
-    // TODO
-    // Gotta figure out how to handle the investment account settings.
-    // If we're set up with 1 to 1 security to account, then we're sort of set as far as rows go.
-    // However, we still need to be able to figure out the cost basis and quantities.
-    // So we need a filter for investment transactions for a specific security.
-    // This will track the shares and cost basis. Would be nice to also be able to
-    // track lots for cost basis purposes.
-    // SecurityTransactionTracker...
-    //      Track lots, cost basis.
-    //      Provide summary information.
-    //
-    // For the Report purposes, for each account, build a list of the securities.
-    // If the securities are not 1 to 1 then we'll add extra rows, otherwise we'll
-    // just use the base account row.
-    // If we're adding extra rows, the first row is the account, and it will not have
-    // any column values.
-    // The subsequent rows will be the individual securities, with their appropriate
-    // information.
-    // 
     
     
     /**
@@ -233,6 +212,8 @@ public class ReportDataView {
         RowEntry summaryRowEntry;
         final RowEntry [] accountRowEntries = new RowEntry[AccountRowEntry.values().length];
         
+        AccountSecuritiesTracker accountSecuritiesTracker;
+        
         protected AccountEntry(Account account, boolean isIncluded, AccountEntry parentAccountEntry) {
             this.account = account;
             this.accountDepth = account.getDepth();
@@ -309,6 +290,13 @@ public class ReportDataView {
             }
             
             return deepestDepth;
+        }
+        
+        protected final AccountSecuritiesTracker getAccountSecuritiesTracker() {
+            if (accountSecuritiesTracker == null) {
+                accountSecuritiesTracker = AccountSecuritiesTracker.createForAccount(account);
+            }
+            return accountSecuritiesTracker;
         }
     }
     
@@ -427,80 +415,6 @@ public class ReportDataView {
         
         
         protected void updateGrandTotalCellValue(DateEntry dateEntry, ReportOutput reportOutput) {
-        }
-    }
-    
-    
-    protected static class BalanceAccountEntryInfo {
-        final AccountEntry accountEntry;
-        final RowEntry rowEntry;
-        final ColumnEntry columnEntry;
-        final BigDecimal balance;
-        
-        protected BalanceAccountEntryInfo(AccountEntry accountEntry, RowEntry rowEntry, ColumnEntry columnEntry, BigDecimal balance) {
-            this.accountEntry = accountEntry;
-            this.rowEntry = rowEntry;
-            this.columnEntry = columnEntry;
-            this.balance = balance;
-        }
-    }
-    
-    protected static class BalanceDateEntryInfo {
-        final Map<AccountEntry, BalanceAccountEntryInfo> accountEntryInfos = new HashMap<>();
-        BigDecimal totalBalance = BigDecimal.ZERO;
-        final int columnIndexBase;
-
-        public BalanceDateEntryInfo(int columnIndexBase) {
-            this.columnIndexBase = columnIndexBase;
-        }
-    }
-    
-    protected static class BalanceCellEntry extends CellEntry {
-        final BalanceAccountEntryInfo accountEntryInfo;
-        String basicStyle = STYLE_BALANCE_VALUE;
-
-        protected BalanceCellEntry(BalanceAccountEntryInfo accountEntryInfo,
-            RowEntry rowEntry, String value) {
-            super(rowEntry, value);
-            this.accountEntryInfo = accountEntryInfo;
-        }
-    }
-    
-    protected static class BalanceTreeCell extends TextFieldTreeTableCell<RowEntry, CellEntry> {
-        final BalanceColumnGenerator generator;
-        final BalanceDateEntryInfo dateEntryInfo;
-        
-        BalanceTreeCell(BalanceColumnGenerator generator, BalanceDateEntryInfo dateEntryInfo) {
-            this.generator = generator;
-            this.dateEntryInfo = dateEntryInfo;
-        }
-
-        @Override
-        public void updateItem(CellEntry item, boolean empty) {
-            super.updateItem(item, empty);            
-            
-            if ((item instanceof BalanceCellEntry) && !empty) {
-                BalanceCellEntry balanceCellEntry = (BalanceCellEntry)item;
-                
-                getStyleClass().add(STYLE_CELL);
-                getStyleClass().remove(STYLE_SUBTOTAL);
-                getStyleClass().remove(STYLE_SUMMARY);
-                getStyleClass().remove(STYLE_GRAND_TOTAL);
-                
-                getStyleClass().add(balanceCellEntry.basicStyle);
-                
-                if (balanceCellEntry.accountEntryInfo != null) {
-                    if (balanceCellEntry.rowEntry == balanceCellEntry.accountEntryInfo.accountEntry.summaryRowEntry) {
-                        getStyleClass().add(STYLE_SUMMARY);
-                    }
-                    else if (balanceCellEntry.rowEntry == balanceCellEntry.accountEntryInfo.rowEntry) {
-                        getStyleClass().add(STYLE_SUBTOTAL);
-                    }
-                }
-                else {
-                    getStyleClass().add(STYLE_GRAND_TOTAL);
-                }
-            }
         }
     }
     
@@ -773,6 +687,8 @@ public class ReportDataView {
             case PRICE:
                 break;
                 
+            case PERCENT_PORTFOLIO :
+                
             default:
                 throw new AssertionError(columnType.name());
             
@@ -780,6 +696,17 @@ public class ReportDataView {
         return null;
     }
 
+    //
+    // COST_BASIS:
+    // GAIN:
+    // QUANTITY:
+    // PRICE:
+    //
+    // They are all based upon an investment account.
+    // For each investement account they will have rows listing
+    // the individual securities.
+    // At the end, have sub-totals for the different columns.
+    //
     
     private void processAccountEntries(ReportOutput reportOutput) {
         reportOutput.columnGenerators.forEach((generator) -> {

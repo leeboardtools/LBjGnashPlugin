@@ -38,14 +38,14 @@ class DeltaPeriodColumnGenerator extends BalanceColumnGenerator {
     }
 
     @Override
-    protected String getAccountEntryCellValue(ReportDataView.BalanceAccountEntryInfo accountInfo, ReportDataView.DateEntry dateEntry, ReportDataView.ReportOutput reportOutput) {
-        ReportDataView.BalanceDateEntryInfo dateEntryInfo = dateEntryInfos.get(dateEntry);
-        ReportDataView.BalanceDateEntryInfo refDateEntryInfo = getReferenceDateEntryInfo(dateEntry, referencePeriodType);
+    protected String getAccountEntryCellValue(BalanceAccountEntryInfo accountInfo, ReportDataView.DateEntry dateEntry, ReportDataView.ReportOutput reportOutput) {
+        BalanceDateEntryInfo dateEntryInfo = dateEntryInfos.get(dateEntry);
+        BalanceDateEntryInfo refDateEntryInfo = getReferenceDateEntryInfo(dateEntry, referencePeriodType);
         if (dateEntryInfo == refDateEntryInfo) {
             return getBaselineAccountEntryCellValue(accountInfo, dateEntry, reportOutput);
         }
         if ((dateEntryInfo != null) && (refDateEntryInfo != null)) {
-            ReportDataView.BalanceAccountEntryInfo refAccountInfo = refDateEntryInfo.accountEntryInfos.get(accountInfo.accountEntry);
+            BalanceAccountEntryInfo refAccountInfo = refDateEntryInfo.accountEntryInfos.get(accountInfo.accountEntry);
             if (refAccountInfo != null) {
                 return getDeltaAccountEntryCellValue(accountInfo, refAccountInfo, dateEntryInfo, refDateEntryInfo, reportOutput);
             }
@@ -54,8 +54,8 @@ class DeltaPeriodColumnGenerator extends BalanceColumnGenerator {
     }
 
     @Override
-    protected String getGrandTotalCellValue(ReportDataView.BalanceDateEntryInfo dateEntryInfo, ReportDataView.DateEntry dateEntry, ReportDataView.ReportOutput reportOutput) {
-        ReportDataView.BalanceDateEntryInfo refDateEntryInfo = getReferenceDateEntryInfo(dateEntry, referencePeriodType);
+    protected String getGrandTotalCellValue(BalanceDateEntryInfo dateEntryInfo, ReportDataView.DateEntry dateEntry, ReportDataView.ReportOutput reportOutput) {
+        BalanceDateEntryInfo refDateEntryInfo = getReferenceDateEntryInfo(dateEntry, referencePeriodType);
         if (dateEntryInfo == refDateEntryInfo) {
             return getBaselineGrandTotalCellValue(dateEntryInfo, dateEntry, reportOutput);
         }
@@ -65,15 +65,15 @@ class DeltaPeriodColumnGenerator extends BalanceColumnGenerator {
         return null;
     }
 
-    protected String getBaselineAccountEntryCellValue(ReportDataView.BalanceAccountEntryInfo accountInfo, ReportDataView.DateEntry dateEntry, ReportDataView.ReportOutput reportOutput) {
+    protected String getBaselineAccountEntryCellValue(BalanceAccountEntryInfo accountInfo, ReportDataView.DateEntry dateEntry, ReportDataView.ReportOutput reportOutput) {
         return reportOutput.toMonetaryValueString(accountInfo.balance, accountInfo.accountEntry.account);
     }
 
-    protected String getBaselineGrandTotalCellValue(ReportDataView.BalanceDateEntryInfo dateEntryInfo, ReportDataView.DateEntry dateEntry, ReportDataView.ReportOutput reportOutput) {
+    protected String getBaselineGrandTotalCellValue(BalanceDateEntryInfo dateEntryInfo, ReportDataView.DateEntry dateEntry, ReportDataView.ReportOutput reportOutput) {
         return reportOutput.toMonetaryValueString(dateEntryInfo.totalBalance, null);
     }
 
-    protected String getDeltaAccountEntryCellValue(ReportDataView.BalanceAccountEntryInfo accountInfo, ReportDataView.BalanceAccountEntryInfo refAccountInfo, ReportDataView.BalanceDateEntryInfo dateEntryInfo, ReportDataView.BalanceDateEntryInfo refDateEntryInfo, ReportDataView.ReportOutput reportOutput) {
+    protected String getDeltaAccountEntryCellValue(BalanceAccountEntryInfo accountInfo, BalanceAccountEntryInfo refAccountInfo, BalanceDateEntryInfo dateEntryInfo, BalanceDateEntryInfo refDateEntryInfo, ReportDataView.ReportOutput reportOutput) {
         if (accountInfo == refAccountInfo) {
             return null;
         }
@@ -81,7 +81,7 @@ class DeltaPeriodColumnGenerator extends BalanceColumnGenerator {
         return reportOutput.toMonetaryValueString(balance, accountInfo.accountEntry.account);
     }
 
-    protected String getDeltaGrandTotalCellValue(ReportDataView.BalanceDateEntryInfo dateEntryInfo, ReportDataView.BalanceDateEntryInfo refDateEntryInfo, ReportDataView.ReportOutput reportOutput) {
+    protected String getDeltaGrandTotalCellValue(BalanceDateEntryInfo dateEntryInfo, BalanceDateEntryInfo refDateEntryInfo, ReportDataView.ReportOutput reportOutput) {
         if (dateEntryInfo == refDateEntryInfo) {
             return null;
         }
