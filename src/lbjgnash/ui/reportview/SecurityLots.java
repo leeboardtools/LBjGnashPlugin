@@ -168,7 +168,7 @@ public class SecurityLots {
             }
         }
         
-        if (!shares.equals(BigDecimal.ZERO)) {
+        if (shares.compareTo(BigDecimal.ZERO) != 0) {
             throw new IllegalArgumentException("More shares were requested than are in the set of lots!");
         }
         

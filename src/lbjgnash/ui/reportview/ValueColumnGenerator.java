@@ -23,7 +23,7 @@ import com.leeboardtools.util.ResourceSource;
 class ValueColumnGenerator extends BalanceColumnGenerator {
 
     @Override
-    protected String getColumnTitle(int columnOffset, ReportDataView.AccountEntry accountEntry, ReportDataView.DateEntry dateEntry, ReportDataView.ReportOutput reportOutput) {
+    protected String getColumnTitle(int columnOffset, AccountEntry accountEntry, DateEntry dateEntry, ReportDataView.ReportOutput reportOutput) {
         if (columnOffset == 0) {
             return ResourceSource.getString("Report.ColumnHeading.Value");
         }
@@ -31,12 +31,12 @@ class ValueColumnGenerator extends BalanceColumnGenerator {
     }
 
     @Override
-    protected String getAccountEntryCellValue(BalanceAccountEntryInfo accountInfo, ReportDataView.DateEntry dateEntry, ReportDataView.ReportOutput reportOutput) {
+    protected String getAccountEntryCellValue(BalanceAccountEntryInfo accountInfo, DateEntry dateEntry, ReportDataView.ReportOutput reportOutput) {
         return reportOutput.toMonetaryValueString(accountInfo.balance, accountInfo.accountEntry.account);
     }
 
     @Override
-    protected String getGrandTotalCellValue(BalanceDateEntryInfo dateEntryInfo, ReportDataView.DateEntry dateEntry, ReportDataView.ReportOutput reportOutput) {
+    protected String getGrandTotalCellValue(BalanceDateEntryInfo dateEntryInfo, DateEntry dateEntry, ReportDataView.ReportOutput reportOutput) {
         return reportOutput.toMonetaryValueString(dateEntryInfo.totalBalance, null);
     }
     

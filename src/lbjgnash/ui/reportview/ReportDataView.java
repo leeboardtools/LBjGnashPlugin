@@ -29,10 +29,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.SortedSet;
 import java.util.TreeSet;
-import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.SimpleObjectProperty;
-import javafx.beans.property.SimpleStringProperty;
-import javafx.beans.property.StringProperty;
 import javafx.scene.control.Control;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeTableColumn;
@@ -40,6 +36,7 @@ import javafx.scene.control.TreeTableView;
 import jgnash.engine.Account;
 import jgnash.engine.AccountGroup;
 import jgnash.engine.Engine;
+import jgnash.engine.MathConstants;
 import lbjgnash.ui.AccountFilter;
 import lbjgnash.ui.ReportDefinition;
 
@@ -69,100 +66,6 @@ public class ReportDataView {
     public static final String STYLE_GRAND_TOTAL    = "report-cell-grand-total";
 
     
-    
-    /**
-     * Used as the class for the cells of the {@link TreeTableView} so we can
-     * associate data accessible to individual {@link Cell}s.
-     */
-    protected static class CellEntry {
-        final RowEntry rowEntry;
-        final String value;
-        
-        protected CellEntry(RowEntry rowEntry, String value) {
-            this.rowEntry = rowEntry;
-            this.value = value;
-        }
-
-        @Override
-        public String toString() {
-            return value;
-        }        
-    }
-    
-    /**
-     * This an individual row for the {@link TreeTableView}.
-     */
-    protected static class RowEntry {
-        final StringProperty rowTitle = new SimpleStringProperty(this, "rowTitle", null);
-        final List<ObjectProperty<CellEntry>> expandedColumnCellProperties = new ArrayList<>();
-        final List<ObjectProperty<CellEntry>> nonExpandedColumnCellProperties = new ArrayList<>();
-
-        protected void setRowTitle(String title) {
-            this.rowTitle.set(title);
-        }
-        protected StringProperty getRowTitle() {
-            return this.rowTitle;
-        }
-        
-        protected ObjectProperty<CellEntry> getColumnCellProperties(int index, TreeItem<RowEntry> entry) {
-            List<ObjectProperty<CellEntry>> propertiesList = (entry.isExpanded()) 
-                ? expandedColumnCellProperties
-                : nonExpandedColumnCellProperties;
-            if (index >= propertiesList.size()) {
-                return null;
-            }
-            return propertiesList.get(index);
-        }
-        
-        protected void setExpandedColumnCellValue(ColumnEntry columnEntry, CellEntry cellEntry) {
-            setColumnCellValue(expandedColumnCellProperties, columnEntry.columnIndex, cellEntry);
-        }
-        protected void setNonExpandedColumnCellValue(ColumnEntry columnEntry, CellEntry cellEntry) {
-            setColumnCellValue(nonExpandedColumnCellProperties, columnEntry.columnIndex, cellEntry);
-        }
-        
-        protected void setColumnCellValue(List<ObjectProperty<CellEntry>> properties, int index, CellEntry cellEntry) {
-            while (index >= properties.size()) {
-                properties.add(null);
-            }
-            
-            ObjectProperty<CellEntry> property = properties.get(index);
-            if (property == null) {
-                property = new SimpleObjectProperty();
-                properties.set(index, property);
-            }
-            
-            property.set(cellEntry);
-        }
-    }
-    
-    
-    /**
-     * This represents an individual {@link TreeTableColumn}.
-     */
-    protected static class ColumnEntry {
-        protected TreeTableColumn<RowEntry, CellEntry> treeTableColumn = new TreeTableColumn<>();
-        
-        // This is set as the column entries of the DateEntries are added
-        // to the ReportOutput's columnEntries list.
-        int columnIndex;
-        
-        protected ColumnEntry() {
-            treeTableColumn.setCellValueFactory((TreeTableColumn.CellDataFeatures<RowEntry, CellEntry> param) -> {
-                return param.getValue().getValue().getColumnCellProperties(columnIndex, param.getValue());
-            });
-        }
-        
-        protected void setExpandedRowValue(RowEntry rowEntry, CellEntry cellEntry) {
-            rowEntry.setExpandedColumnCellValue(this, cellEntry);
-        }
-        
-        protected void setNonExpandedRowValue(RowEntry rowEntry, CellEntry cellEntry) {
-            rowEntry.setNonExpandedColumnCellValue(this, cellEntry);
-        }
-    }
-    
-    
     /**
      * This represents the full output of one report.
      */
@@ -175,248 +78,30 @@ public class ReportDataView {
         final List<ColumnEntry> columnEntries = new ArrayList<>();
 
         RowEntry grandTotalRowEntry;
+        
+        public BigDecimal toMonetaryValue(BigDecimal value, Account account) {
+            return value.setScale(2, MathConstants.roundingMode);
+        }
 
         public String toMonetaryValueString(BigDecimal value, Account account) {
-            return value.setScale(2).toPlainString();
+            return value.setScale(2, MathConstants.roundingMode).toPlainString();
         }
 
         public String toPercentString(BigDecimal numerator, BigDecimal denominator) {
             numerator = numerator.multiply(ReportDataView.ONE_HUNDRED).setScale(1);
             try {
-                BigDecimal value = numerator.divide(denominator, RoundingMode.HALF_UP);
+                BigDecimal value = numerator.divide(denominator, MathConstants.roundingMode);
                 return value.toPlainString() + percentSuffix;
             } catch (ArithmeticException ex) {
                 return "-";
             }
         }
-    }
-    
-    
-    protected static enum AccountRowEntry {
-        PRE_ACCOUNT,
-        PRE_CHILD_ACCOUNT,
-        POST_CHILD_ACCOUNT,
-        POST_ACCOUNT,
-    }
-    
-
-    /**
-     * Encapsulates a single account, with a list of all the child accounts.
-     */
-    protected static class AccountEntry {
-        final Account account;
-        final int accountDepth;
-        final List<AccountEntry> childAccountEntries = new ArrayList<>();
-        final boolean isIncluded;
-        final int includeDepth;
-        RowEntry summaryRowEntry;
-        final RowEntry [] accountRowEntries = new RowEntry[AccountRowEntry.values().length];
         
-        AccountSecuritiesTracker accountSecuritiesTracker;
-        
-        protected AccountEntry(Account account, boolean isIncluded, AccountEntry parentAccountEntry) {
-            this.account = account;
-            this.accountDepth = account.getDepth();
-            this.isIncluded = isIncluded;
-
-            int myIncludeDepth = (parentAccountEntry != null) ? parentAccountEntry.includeDepth : 0;
-            if (isIncluded) {
-                ++myIncludeDepth;
-                summaryRowEntry = new RowEntry();
-                summaryRowEntry.setRowTitle(account.getName());
-            }
-            
-            this.includeDepth = myIncludeDepth;
-        }
-        
-        /**
-         * This retrieves the {@link RowEntry} for a given {@link AccountRowEntry}, if
-         * no one has called {@link #useAccountRowEntry(lbjgnash.ui.ReportDataView.AccountRowEntry) } for
-         * it then <code>null</code> is returned.
-         * @param accountRowEntry   The row entry of interest.
-         * @return The row entry, <code>null</code> if it is not in use.
-         */
-        protected final RowEntry getAccountRowEntry(AccountRowEntry accountRowEntry) {
-            return accountRowEntries[accountRowEntry.ordinal()];
-        }
-        
-        /**
-         * This retrieves a {@link RowEntry} for a given {@link AccountRowEntry}, allocating
-         * the row entry if necessary.
-         * @param accountRowEntry   The row entry of interest.
-         * @return The row entry.
-         */
-        protected final RowEntry useAccountRowEntry(AccountRowEntry accountRowEntry) {
-            if (accountRowEntries[accountRowEntry.ordinal()] == null) {
-                RowEntry rowEntry = new RowEntry();
-                accountRowEntries[accountRowEntry.ordinal()] = rowEntry;
-                if ((accountRowEntry == AccountRowEntry.PRE_CHILD_ACCOUNT) 
-                    || (accountRowEntry == AccountRowEntry.POST_CHILD_ACCOUNT)) {
-                    rowEntry.setRowTitle(account.getName());
-                }
-            }
-            return accountRowEntries[accountRowEntry.ordinal()];
-        }
-        
-        protected final boolean isAnyChildAccountIncluded() {
-            for (AccountEntry accountEntry : childAccountEntries) {
-                if (accountEntry.isIncluded) {
-                    return true;
-                }
-            }
-            
-            for (AccountEntry accountEntry : childAccountEntries) {
-                if (accountEntry.isAnyChildAccountIncluded()) {
-                    return true;
-                }
-            }
-            return false;
-        }
-        
-
-        protected final int getDeepestIncludedChildAccountDepth() {
-            int deepestDepth = -1;
-            for (AccountEntry accountEntry : childAccountEntries) {
-                int depth = accountEntry.getDeepestIncludedChildAccountDepth();
-                if (depth > deepestDepth) {
-                    deepestDepth = depth;
-                }
-                else if (accountEntry.isIncluded) {
-                    depth = accountEntry.accountDepth;
-                    if (depth > deepestDepth) {
-                        deepestDepth = depth;
-                    }
-                }
-            }
-            
-            return deepestDepth;
-        }
-        
-        protected final AccountSecuritiesTracker getAccountSecuritiesTracker() {
-            if (accountSecuritiesTracker == null) {
-                accountSecuritiesTracker = AccountSecuritiesTracker.createForAccount(account);
-            }
-            return accountSecuritiesTracker;
+        public String toSharesQuantity(BigDecimal value) {
+            return value.setScale(4).toPlainString();
         }
     }
     
-    
-    /**
-     * This manages the report column data for a specific date (which was generated by
-     * the report's date generator.
-     */
-    protected static class DateEntry implements Comparable<DateEntry> {
-        final LocalDate startDate;
-        final LocalDate endDate;
-        final int index;
-        final List<ColumnEntry> columnEntries = new ArrayList<>();
-        
-        protected DateEntry(LocalDate dateStart, LocalDate dateEnd, int index) {
-            this.startDate = dateStart;
-            this.endDate = dateEnd;
-            this.index = index;
-        }
-
-        protected ColumnEntry getColumnEntryAtIndex(int index) {
-            while (index >= columnEntries.size()) {
-                columnEntries.add(new ColumnEntry());
-            }
-            
-            return columnEntries.get(index);
-        }
-
-        @Override
-        public int compareTo(DateEntry o) {
-            return endDate.compareTo(o.endDate);
-        }
-        
-    }
-    
-    
-    /**
-     * The base abstract class for the objects responsible for generating {@link ColumnEntry}
-     * objects.
-     */
-    protected static abstract class ColumnGenerator {
-        
-        protected void setupAccountEntryRows(ReportOutput reportOutput) {
-            reportOutput.accountEntries.forEach((accountEntry) -> {
-                setupAccountEntryRows(accountEntry, reportOutput);
-            });
-        }
-        
-        /**
-         * This is normally overridden to handle the actual request for row entries for an account entry.
-         * This implementation should normally be called from the overridden method because
-         * this calls itself for all the child account entries.
-         * @param accountEntry  The account entry to process.
-         * @param reportOutput The report output.
-         */
-        protected void setupAccountEntryRows(AccountEntry accountEntry, ReportOutput reportOutput) {
-            accountEntry.childAccountEntries.forEach((childAccountEntry) -> {
-                setupAccountEntryRows(childAccountEntry, reportOutput);
-            });
-        }
-        
-        
-        protected void setupDateEntryColumns(ReportOutput reportOutput) {
-            reportOutput.dateEntries.forEach((dateEntry) -> {
-                final int columnIndexBase = dateEntry.columnEntries.size();
-                reportOutput.accountEntries.forEach((accountEntry) -> {
-                    setupDateEntryColumns(dateEntry, accountEntry, reportOutput, columnIndexBase);
-                });
-            });
-        }
-        
-        /**
-         * This is normally overridden to handle the actual processing of an account entry for
-         * a date entry. This implementation should normally be called from the overridden method
-         * because it calls itself for all the child account entries.
-         * @param dateEntry The date entry being processed.
-         * @param accountEntry  The account entry this is for.
-         * @param reportOutput  The report output this is for.
-         * @param columnIndexBase   The index to add to any column entry requests.
-         */
-        protected void setupDateEntryColumns(DateEntry dateEntry, AccountEntry accountEntry, ReportOutput reportOutput, int columnIndexBase) {
-            accountEntry.childAccountEntries.forEach((childAccountEntry)-> {
-                setupDateEntryColumns(dateEntry, childAccountEntry, reportOutput, columnIndexBase);
-            });
-        }
-        
-        
-        protected void updateCellValues(ReportOutput reportOutput) {
-            reportOutput.dateEntries.forEach((dateEntry) -> {
-                if (reportOutput.grandTotalRowEntry != null) {
-                    updateDateEntryCellValues(dateEntry, reportOutput);
-                    updateGrandTotalCellValue(dateEntry, reportOutput);
-                }
-            });
-        }
-        
-        protected void updateDateEntryCellValues(DateEntry dateEntry, ReportOutput reportOutput) {
-            reportOutput.accountEntries.forEach((accountEntry) -> {
-                updateDateEntryCellValues(dateEntry, accountEntry, reportOutput);
-            });
-        }
-
-        /**
-         * This is normally overridden to handle the actual setting of the cell for a given
-         * date entry and account entry. This implementation should normally be called from
-         * the overridden method because it calls itself for all the child account entries.
-         * @param dateEntry The date entry being processed.
-         * @param accountEntry  The account entry this is for.
-         * @param reportOutput The report output this is for.
-         */
-        protected void updateDateEntryCellValues(DateEntry dateEntry, AccountEntry accountEntry, ReportOutput reportOutput) {
-            accountEntry.childAccountEntries.forEach((childAccountEntry)-> {
-                updateDateEntryCellValues(dateEntry, childAccountEntry, reportOutput);
-            });
-        }
-        
-        
-        protected void updateGrandTotalCellValue(DateEntry dateEntry, ReportOutput reportOutput) {
-        }
-    }
     
 
     public static enum ReferencePeriodType {
@@ -424,8 +109,6 @@ public class ReportDataView {
         OLDEST,
         NEWEST,
     }
-    
-    
     
 
     
@@ -435,6 +118,9 @@ public class ReportDataView {
         
         headingColumn = new TreeTableColumn<>();
         headingColumn.setCellValueFactory((TreeTableColumn.CellDataFeatures<RowEntry, String> param) -> {
+            if (param.getValue().getValue() == null) {
+                return null;
+            }
             return param.getValue().getValue().getRowTitle();
         });
     }
@@ -528,20 +214,22 @@ public class ReportDataView {
             parent = treeItem;
         }
         
-        addRowEntryIfNotNull(parent, accountEntry, AccountRowEntry.PRE_ACCOUNT);
-        addRowEntryIfNotNull(parent, accountEntry, AccountRowEntry.PRE_CHILD_ACCOUNT);
-        
         final TreeItem<RowEntry> itemForChildren = parent;
         accountEntry.childAccountEntries.forEach((childAccountEntry) -> {
             addRowsForAccountEntry(itemForChildren, childAccountEntry);
         });
+        
+        if (accountEntry.postChildAccountRowEntries != null) {
+            final TreeItem<RowEntry> finalParent = parent;
+            accountEntry.postChildAccountRowEntries.forEach((rowEntry) -> {
+                finalParent.getChildren().add(new TreeItem<>(rowEntry));
+            });
+        }
 
-        addRowEntryIfNotNull(parent, accountEntry, AccountRowEntry.POST_CHILD_ACCOUNT);
-        addRowEntryIfNotNull(parent, accountEntry, AccountRowEntry.POST_ACCOUNT);
+        addRowEntryIfNotNull(parent, accountEntry, accountEntry.postChildRowEntry);
     }
     
-    protected void addRowEntryIfNotNull(TreeItem<RowEntry> parent, AccountEntry accountEntry, AccountRowEntry accountRowEntry) {
-        RowEntry rowEntry = accountEntry.getAccountRowEntry(accountRowEntry);
+    protected void addRowEntryIfNotNull(TreeItem<RowEntry> parent, AccountEntry accountEntry, RowEntry rowEntry) {
         if (rowEntry != null) {
             parent.getChildren().add(new TreeItem<>(rowEntry));
         }
@@ -682,12 +370,19 @@ public class ReportDataView {
                 break;
                 
             case QUANTITY:
-                break;
+                return new QuantityColumnGenerator();
                 
             case PRICE:
                 break;
                 
             case PERCENT_PORTFOLIO :
+                break;
+                
+            case ANNUAL_RATE_OF_RETURN :
+                break;
+                
+            case MARKET_VALUE :
+                return new MarketValueColumnGenerator();
                 
             default:
                 throw new AssertionError(columnType.name());

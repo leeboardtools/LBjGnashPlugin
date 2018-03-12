@@ -25,21 +25,21 @@ import javafx.scene.control.cell.TextFieldTreeTableCell;
 /**
  * Abstract class for the report columns that work off the standard account balance.
  */
-abstract class BalanceColumnGenerator extends ReportDataView.ColumnGenerator {
+abstract class BalanceColumnGenerator extends ColumnGenerator {
 
     int maxIncludedAccountDepth;
     int minIncludedAccountDepth;
-    final TreeMap<ReportDataView.DateEntry, BalanceDateEntryInfo> dateEntryInfos = new TreeMap<>();
+    final TreeMap<DateEntry, BalanceDateEntryInfo> dateEntryInfos = new TreeMap<>();
     BigDecimal subTotal;
 
     
     protected static class BalanceAccountEntryInfo {
-        final ReportDataView.AccountEntry accountEntry;
-        final ReportDataView.RowEntry rowEntry;
-        final ReportDataView.ColumnEntry columnEntry;
+        final AccountEntry accountEntry;
+        final RowEntry rowEntry;
+        final ColumnEntry columnEntry;
         final BigDecimal balance;
         
-        protected BalanceAccountEntryInfo(ReportDataView.AccountEntry accountEntry, ReportDataView.RowEntry rowEntry, ReportDataView.ColumnEntry columnEntry, BigDecimal balance) {
+        protected BalanceAccountEntryInfo(AccountEntry accountEntry, RowEntry rowEntry, ColumnEntry columnEntry, BigDecimal balance) {
             this.accountEntry = accountEntry;
             this.rowEntry = rowEntry;
             this.columnEntry = columnEntry;
@@ -47,8 +47,12 @@ abstract class BalanceColumnGenerator extends ReportDataView.ColumnGenerator {
         }
     }
     
+    
+    /**
+     * Tracks the balance total for a date entry.
+     */
     protected static class BalanceDateEntryInfo {
-        final Map<ReportDataView.AccountEntry, BalanceAccountEntryInfo> accountEntryInfos = new HashMap<>();
+        final Map<AccountEntry, BalanceAccountEntryInfo> accountEntryInfos = new HashMap<>();
         BigDecimal totalBalance = BigDecimal.ZERO;
         final int columnIndexBase;
 
@@ -57,18 +61,23 @@ abstract class BalanceColumnGenerator extends ReportDataView.ColumnGenerator {
         }
     }
     
-    protected static class BalanceCellEntry extends ReportDataView.CellEntry {
+    
+    protected static class BalanceCellEntry extends CellEntry {
         final BalanceAccountEntryInfo accountEntryInfo;
         String basicStyle = ReportDataView.STYLE_BALANCE_VALUE;
 
         protected BalanceCellEntry(BalanceAccountEntryInfo accountEntryInfo,
-            ReportDataView.RowEntry rowEntry, String value) {
+            RowEntry rowEntry, String value) {
             super(rowEntry, value);
             this.accountEntryInfo = accountEntryInfo;
         }
     }
     
-    protected static class BalanceTreeCell extends TextFieldTreeTableCell<ReportDataView.RowEntry, ReportDataView.CellEntry> {
+    
+    /**
+     * Used to set the CSS styles for the individual cells.
+     */
+    protected static class BalanceTreeCell extends TextFieldTreeTableCell<RowEntry, CellEntry> {
         final BalanceColumnGenerator generator;
         final BalanceDateEntryInfo dateEntryInfo;
         
@@ -78,7 +87,7 @@ abstract class BalanceColumnGenerator extends ReportDataView.ColumnGenerator {
         }
 
         @Override
-        public void updateItem(ReportDataView.CellEntry item, boolean empty) {
+        public void updateItem(CellEntry item, boolean empty) {
             super.updateItem(item, empty);            
             
             if ((item instanceof BalanceCellEntry) && !empty) {
@@ -106,6 +115,7 @@ abstract class BalanceColumnGenerator extends ReportDataView.ColumnGenerator {
         }
     }
     
+    
     @Override
     protected void setupAccountEntryRows(ReportDataView.ReportOutput reportOutput) {
         maxIncludedAccountDepth = 0;
@@ -113,12 +123,15 @@ abstract class BalanceColumnGenerator extends ReportDataView.ColumnGenerator {
         super.setupAccountEntryRows(reportOutput);
     }
 
+    
     @Override
-    protected void setupAccountEntryRows(ReportDataView.AccountEntry accountEntry, ReportDataView.ReportOutput reportOutput) {
+    protected void setupRowsForAccountEntry(AccountEntry accountEntry, ReportDataView.ReportOutput reportOutput, AccountEntry parentAccountEntry) {
         if (accountEntry.isIncluded) {
+            accountEntry.useSummaryRowEntry();
             if (accountEntry.isAnyChildAccountIncluded()) {
-                accountEntry.useAccountRowEntry(ReportDataView.AccountRowEntry.POST_CHILD_ACCOUNT);
+                accountEntry.usePostChildRowEntry();
             }
+            
             if (accountEntry.accountDepth > maxIncludedAccountDepth) {
                 maxIncludedAccountDepth = accountEntry.accountDepth;
             }
@@ -126,39 +139,49 @@ abstract class BalanceColumnGenerator extends ReportDataView.ColumnGenerator {
                 minIncludedAccountDepth = accountEntry.accountDepth;
             }
         }
-        super.setupAccountEntryRows(accountEntry, reportOutput);
+        super.setupRowsForAccountEntry(accountEntry, reportOutput, parentAccountEntry);
     }
 
+    
     @Override
-    protected void setupDateEntryColumns(ReportDataView.DateEntry dateEntry, ReportDataView.AccountEntry accountEntry, ReportDataView.ReportOutput reportOutput, int columnIndexBase) {
+    protected void setupColumnsForDateEntry(DateEntry dateEntry, AccountEntry accountEntry, ReportDataView.ReportOutput reportOutput, int columnIndexBase) {
         if (!accountEntry.isIncluded) {
-            super.setupDateEntryColumns(dateEntry, accountEntry, reportOutput, columnIndexBase);
+            super.setupColumnsForDateEntry(dateEntry, accountEntry, reportOutput, columnIndexBase);
             return;
         }
+        
+        
         BigDecimal previousSubTotal = subTotal;
         subTotal = BigDecimal.ZERO;
         try {
             //int columnOffset = maxIncludedAccountDepth - accountEntry.accountDepth;
             int columnOffset = 0;
-            final ReportDataView.ColumnEntry columnEntry = dateEntry.getColumnEntryAtIndex(columnOffset + columnIndexBase);
-            super.setupDateEntryColumns(dateEntry, accountEntry, reportOutput, columnIndexBase);
-            ReportDataView.RowEntry rowEntry = null;
+            final ColumnEntry columnEntry = dateEntry.getColumnEntryAtIndex(columnOffset + columnIndexBase);
+            
+            super.setupColumnsForDateEntry(dateEntry, accountEntry, reportOutput, columnIndexBase);
+            
+            RowEntry rowEntry = null;
             if (accountEntry.isAnyChildAccountIncluded()) {
-                rowEntry = accountEntry.getAccountRowEntry(ReportDataView.AccountRowEntry.POST_CHILD_ACCOUNT);
+                rowEntry = accountEntry.usePostChildRowEntry();
             }
+            
             BigDecimal balance = getInternalAccountBalance(rowEntry, columnEntry, accountEntry, dateEntry, reportOutput);
             subTotal = subTotal.add(balance);
+            
             BalanceDateEntryInfo dateEntryInfo = dateEntryInfos.get(dateEntry);
             if (dateEntryInfo == null) {
                 // First time, gotta set up the column entry.
                 dateEntryInfo = createDateEntryInfo(accountEntry, dateEntry, columnEntry, columnIndexBase);
                 dateEntryInfos.put(dateEntry, dateEntryInfo);
+                
                 columnEntry.treeTableColumn.setText(getColumnTitle(columnOffset, accountEntry, dateEntry, reportOutput));
+                
                 final BalanceDateEntryInfo cellDateEntryInfo = dateEntryInfo;
-                columnEntry.treeTableColumn.setCellFactory((javafx.scene.control.TreeTableColumn<lbjgnash.ui.reportview.ReportDataView.RowEntry, lbjgnash.ui.reportview.ReportDataView.CellEntry> column) -> {
+                columnEntry.treeTableColumn.setCellFactory((javafx.scene.control.TreeTableColumn<lbjgnash.ui.reportview.RowEntry, lbjgnash.ui.reportview.CellEntry> column) -> {
                     return new BalanceTreeCell(this, cellDateEntryInfo);
                 });
             }
+            
             BalanceAccountEntryInfo accountEntryInfo = createAccountEntryInfo(accountEntry, dateEntry, rowEntry, columnEntry, subTotal);
             dateEntryInfo.accountEntryInfos.put(accountEntry, accountEntryInfo);
             if (accountEntry.includeDepth == 1) {
@@ -172,64 +195,76 @@ abstract class BalanceColumnGenerator extends ReportDataView.ColumnGenerator {
         }
     }
 
-    protected BalanceDateEntryInfo createDateEntryInfo(ReportDataView.AccountEntry accountEntry, ReportDataView.DateEntry dateEntry, ReportDataView.ColumnEntry columnEntry, int columnIndexBase) {
+    
+    protected BalanceDateEntryInfo createDateEntryInfo(AccountEntry accountEntry, DateEntry dateEntry, ColumnEntry columnEntry, int columnIndexBase) {
         return new BalanceDateEntryInfo(columnIndexBase);
     }
 
-    protected BalanceAccountEntryInfo createAccountEntryInfo(ReportDataView.AccountEntry accountEntry, ReportDataView.DateEntry dateEntry, ReportDataView.RowEntry rowEntry, ReportDataView.ColumnEntry columnEntry, BigDecimal balance) {
+    
+    protected BalanceAccountEntryInfo createAccountEntryInfo(AccountEntry accountEntry, DateEntry dateEntry, RowEntry rowEntry, ColumnEntry columnEntry, BigDecimal balance) {
         return new BalanceAccountEntryInfo(accountEntry, rowEntry, columnEntry, balance);
     }
 
+    
     @Override
-    protected void updateDateEntryCellValues(ReportDataView.DateEntry dateEntry, ReportDataView.AccountEntry accountEntry, ReportDataView.ReportOutput reportOutput) {
+    protected void updateCellValuesForDateEntryAccountEntry(DateEntry dateEntry, AccountEntry accountEntry, ReportDataView.ReportOutput reportOutput) {
         if (accountEntry.isIncluded) {
             BalanceDateEntryInfo dateEntryInfo = dateEntryInfos.get(dateEntry);
             if (dateEntryInfo != null) {
+                
                 BalanceAccountEntryInfo accountEntryInfo = dateEntryInfo.accountEntryInfos.get(accountEntry);
                 String value = getAccountEntryCellValue(accountEntryInfo, dateEntry, reportOutput);
+
                 if (accountEntryInfo.rowEntry != null) {
-                    ReportDataView.CellEntry cellEntry = new BalanceCellEntry(accountEntryInfo, accountEntryInfo.rowEntry, value);
+                    CellEntry cellEntry = new BalanceCellEntry(accountEntryInfo, accountEntryInfo.rowEntry, value);
                     accountEntryInfo.rowEntry.setExpandedColumnCellValue(accountEntryInfo.columnEntry, cellEntry);
                     accountEntryInfo.rowEntry.setNonExpandedColumnCellValue(accountEntryInfo.columnEntry, cellEntry);
                 }
+
                 if (accountEntry.summaryRowEntry != null) {
-                    ReportDataView.CellEntry cellEntry = new BalanceCellEntry(accountEntryInfo, accountEntry.summaryRowEntry, value);
+                    CellEntry cellEntry = new BalanceCellEntry(accountEntryInfo, accountEntry.summaryRowEntry, value);
                     accountEntry.summaryRowEntry.setNonExpandedColumnCellValue(accountEntryInfo.columnEntry, cellEntry);
                 }
             }
         }
-        super.updateDateEntryCellValues(dateEntry, accountEntry, reportOutput);
+        super.updateCellValuesForDateEntryAccountEntry(dateEntry, accountEntry, reportOutput);
     }
 
+    
     @Override
-    protected void updateGrandTotalCellValue(ReportDataView.DateEntry dateEntry, ReportDataView.ReportOutput reportOutput) {
+    protected void updateGrandTotalCellValue(DateEntry dateEntry, ReportDataView.ReportOutput reportOutput) {
         BalanceDateEntryInfo dateEntryInfo = dateEntryInfos.get(dateEntry);
         if (dateEntryInfo != null) {
             String value = getGrandTotalCellValue(dateEntryInfo, dateEntry, reportOutput);
             if (StringUtil.isNonEmpty(value)) {
-                ReportDataView.ColumnEntry columnEntry = dateEntry.getColumnEntryAtIndex(dateEntryInfo.columnIndexBase);
-                ReportDataView.CellEntry cellEntry = new BalanceCellEntry(null, reportOutput.grandTotalRowEntry, value);
+                ColumnEntry columnEntry = dateEntry.getColumnEntryAtIndex(dateEntryInfo.columnIndexBase);
+                CellEntry cellEntry = new BalanceCellEntry(null, reportOutput.grandTotalRowEntry, value);
                 reportOutput.grandTotalRowEntry.setNonExpandedColumnCellValue(columnEntry, cellEntry);
             }
         }
     }
+    
 
-    protected abstract String getColumnTitle(int columnOffset, ReportDataView.AccountEntry accountEntry, ReportDataView.DateEntry dateEntry, ReportDataView.ReportOutput reportOutput);
+    protected abstract String getColumnTitle(int columnOffset, AccountEntry accountEntry, DateEntry dateEntry, ReportDataView.ReportOutput reportOutput);
 
-    protected BigDecimal getInternalAccountBalance(ReportDataView.RowEntry rowEntry, ReportDataView.ColumnEntry columnEntry, ReportDataView.AccountEntry accountEntry, ReportDataView.DateEntry dateEntry, ReportDataView.ReportOutput reportOutput) {
+    
+    protected BigDecimal getInternalAccountBalance(RowEntry rowEntry, ColumnEntry columnEntry, AccountEntry accountEntry, DateEntry dateEntry, ReportDataView.ReportOutput reportOutput) {
         return accountEntry.account.getBalance(dateEntry.endDate);
     }
 
-    protected abstract String getAccountEntryCellValue(BalanceAccountEntryInfo accountInfo, ReportDataView.DateEntry dateEntry, ReportDataView.ReportOutput reportOutput);
+    
+    protected abstract String getAccountEntryCellValue(BalanceAccountEntryInfo accountInfo, DateEntry dateEntry, ReportDataView.ReportOutput reportOutput);
 
-    protected String getGrandTotalCellValue(BalanceDateEntryInfo dateEntryInfo, ReportDataView.DateEntry dateEntry, ReportDataView.ReportOutput reportOutput) {
+    
+    protected String getGrandTotalCellValue(BalanceDateEntryInfo dateEntryInfo, DateEntry dateEntry, ReportDataView.ReportOutput reportOutput) {
         return null;
     }
 
-    protected BalanceDateEntryInfo getReferenceDateEntryInfo(ReportDataView.DateEntry dateEntry, ReportDataView.ReferencePeriodType periodType) {
+    
+    protected BalanceDateEntryInfo getReferenceDateEntryInfo(DateEntry dateEntry, ReportDataView.ReferencePeriodType periodType) {
         switch (periodType) {
             case PREVIOUS:
-                Map.Entry<ReportDataView.DateEntry, BalanceDateEntryInfo> entry = dateEntryInfos.lowerEntry(dateEntry);
+                Map.Entry<DateEntry, BalanceDateEntryInfo> entry = dateEntryInfos.lowerEntry(dateEntry);
                 if (entry == null) {
                     entry = dateEntryInfos.firstEntry();
                 }

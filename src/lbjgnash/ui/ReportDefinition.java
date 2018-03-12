@@ -212,6 +212,8 @@ public class ReportDefinition extends CompositeObservable {
         QUANTITY("ReportDefinition.ColumnType.Quantity"),
         PRICE("ReportDefinition.ColumnType.Price"),
         PERCENT_PORTFOLIO("ReportDefinition.ColumnType.PercentPortfolio"),
+        ANNUAL_RATE_OF_RETURN("ReportDefinition.ColumnType.AnnualRateOfReturn"),
+        MARKET_VALUE("ReportDefinition.ColumnType.MarketValue"),
         ;
         
         private final String stringResourceId;

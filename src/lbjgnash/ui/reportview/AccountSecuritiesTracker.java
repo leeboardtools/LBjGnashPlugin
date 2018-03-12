@@ -33,6 +33,10 @@ public class AccountSecuritiesTracker {
         this.account = account;
     }
     
+    public final Account getAccount() {
+        return account;
+    }
+    
     public final SortedMap<SecurityNode, SecurityTransactionTracker> getTransactionTrackers() {
         return transactionTrackers;
     }

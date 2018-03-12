@@ -30,7 +30,7 @@ class DeltaPeriodColumnGenerator extends BalanceColumnGenerator {
     }
 
     @Override
-    protected String getColumnTitle(int columnOffset, ReportDataView.AccountEntry accountEntry, ReportDataView.DateEntry dateEntry, ReportDataView.ReportOutput reportOutput) {
+    protected String getColumnTitle(int columnOffset, AccountEntry accountEntry, DateEntry dateEntry, ReportDataView.ReportOutput reportOutput) {
         if (columnOffset == 0) {
             return ResourceSource.getString("Report.ColumnHeading.DeltaPreviousPeriod");
         }
@@ -38,7 +38,7 @@ class DeltaPeriodColumnGenerator extends BalanceColumnGenerator {
     }
 
     @Override
-    protected String getAccountEntryCellValue(BalanceAccountEntryInfo accountInfo, ReportDataView.DateEntry dateEntry, ReportDataView.ReportOutput reportOutput) {
+    protected String getAccountEntryCellValue(BalanceAccountEntryInfo accountInfo, DateEntry dateEntry, ReportDataView.ReportOutput reportOutput) {
         BalanceDateEntryInfo dateEntryInfo = dateEntryInfos.get(dateEntry);
         BalanceDateEntryInfo refDateEntryInfo = getReferenceDateEntryInfo(dateEntry, referencePeriodType);
         if (dateEntryInfo == refDateEntryInfo) {
@@ -54,7 +54,7 @@ class DeltaPeriodColumnGenerator extends BalanceColumnGenerator {
     }
 
     @Override
-    protected String getGrandTotalCellValue(BalanceDateEntryInfo dateEntryInfo, ReportDataView.DateEntry dateEntry, ReportDataView.ReportOutput reportOutput) {
+    protected String getGrandTotalCellValue(BalanceDateEntryInfo dateEntryInfo, DateEntry dateEntry, ReportDataView.ReportOutput reportOutput) {
         BalanceDateEntryInfo refDateEntryInfo = getReferenceDateEntryInfo(dateEntry, referencePeriodType);
         if (dateEntryInfo == refDateEntryInfo) {
             return getBaselineGrandTotalCellValue(dateEntryInfo, dateEntry, reportOutput);
@@ -65,11 +65,11 @@ class DeltaPeriodColumnGenerator extends BalanceColumnGenerator {
         return null;
     }
 
-    protected String getBaselineAccountEntryCellValue(BalanceAccountEntryInfo accountInfo, ReportDataView.DateEntry dateEntry, ReportDataView.ReportOutput reportOutput) {
+    protected String getBaselineAccountEntryCellValue(BalanceAccountEntryInfo accountInfo, DateEntry dateEntry, ReportDataView.ReportOutput reportOutput) {
         return reportOutput.toMonetaryValueString(accountInfo.balance, accountInfo.accountEntry.account);
     }
 
-    protected String getBaselineGrandTotalCellValue(BalanceDateEntryInfo dateEntryInfo, ReportDataView.DateEntry dateEntry, ReportDataView.ReportOutput reportOutput) {
+    protected String getBaselineGrandTotalCellValue(BalanceDateEntryInfo dateEntryInfo, DateEntry dateEntry, ReportDataView.ReportOutput reportOutput) {
         return reportOutput.toMonetaryValueString(dateEntryInfo.totalBalance, null);
     }
 

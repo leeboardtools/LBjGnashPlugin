@@ -15,10 +15,25 @@
  */
 package lbjgnash.ui.reportview;
 
+import com.leeboardtools.util.ResourceSource;
+import java.math.BigDecimal;
+
 /**
  *
  * @author Albert Santos
  */
 public class QuantityColumnGenerator extends SecuritiesColumnGenerator {
+
+    @Override
+    protected String getColumnTitle(AccountEntry accountEntry, DateEntry dateEntry, ReportDataView.ReportOutput reportOutput) {
+        return ResourceSource.getString("Report.ColumnHeading.Quantity");
+    }
+
+    @Override
+    protected String getSecurityEntryCellValue(DatedSecurityEntryInfo securityEntryInfo, DateEntryInfo dateEntryInfo, 
+            ReportDataView.ReportOutput reportOutput) {
+        BigDecimal totalShares = securityEntryInfo.trackerDateEntry.getTotalShares();
+        return reportOutput.toSharesQuantity(totalShares);
+    }
     
 }

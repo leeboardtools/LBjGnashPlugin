@@ -181,11 +181,13 @@ public class AccountFilter extends CompositeObservable {
             return false;
         }
         
-        Account parentAccount = account.getParent();
+        return true;
+/*        Account parentAccount = account.getParent();
         if ((parentAccount == null) || (parentAccount.getAccountType().getAccountGroup().equals(AccountGroup.ROOT))) {
             return true;
         }
         return isIncludeAccountExceptName(parentAccount);
+*/
     }
     
     

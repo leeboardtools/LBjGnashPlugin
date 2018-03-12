@@ -17,8 +17,12 @@ package lbjgnash.ui.reportview;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 import java.util.TreeSet;
 import jgnash.engine.InvestmentTransaction;
+import jgnash.engine.MathConstants;
 import jgnash.engine.SecurityNode;
 
 /**
@@ -63,31 +67,35 @@ public class SecurityTransactionTracker {
     
     
     
-    public static class DateEntry {
+    public class DateEntry implements Comparable<DateEntry> {
         private final LocalDate date;
         private final SecurityLots securityLots;
-        private final BigDecimal marketPrice;
-        private final SecurityLotAction securityLotAction;
+        private final BigDecimal transactionPrice;
+        private final List<SecurityLotAction> securityLotActions = new ArrayList<>();
         
         /**
          * Constructor.
          * @param date  The date.
          * @param marketPrice   The market price on the date.
-         * @param securityLots  The security lots, this is after the action has been applied.
          * @param securityLotAction The action that was applied to obtain the security lots.
+         * @param otherActions  If not <code>null</code> the other actions that preceded securityLotAction on this date.
+         * @param securityLots  The security lots, this is after the action has been applied.
          */
-        public DateEntry(LocalDate date, BigDecimal marketPrice, SecurityLotAction securityLotAction, SecurityLots securityLots) {
+        public DateEntry(LocalDate date, BigDecimal marketPrice, SecurityLotAction securityLotAction, Collection<SecurityLotAction> otherActions,
+                SecurityLots securityLots) {
             this.date = date;
-            this.marketPrice = marketPrice;
+            this.transactionPrice = marketPrice;
             this.securityLots = securityLots;           
-            this.securityLotAction = securityLotAction;
+            if (otherActions != null) {
+                this.securityLotActions.addAll(otherActions);
+            }
+            this.securityLotActions.add(securityLotAction);
         }
         
         public DateEntry(LocalDate date) {
             this.date = date;
-            this.marketPrice = null;
+            this.transactionPrice = null;
             this.securityLots = null;
-            this.securityLotAction = null;
         }
         
         /**
@@ -105,17 +113,17 @@ public class SecurityTransactionTracker {
         }
         
         /**
-         * @return The action that was applied to obtain the entry's security lots.
+         * @return The list of actions that were applied to obtain the entry's security lots.
          */
-        public final SecurityLotAction getSecurityLotAction() {
-            return securityLotAction;
+        public final List<SecurityLotAction> getSecurityLotActions() {
+            return securityLotActions;
         }
         
         /**
          * @return The market price at the time of the entry.
          */
-        public final BigDecimal getMarketPrice() {
-            return marketPrice;
+        public final BigDecimal getTransactionPrice() {
+            return transactionPrice;
         }
         
         /**
@@ -130,6 +138,23 @@ public class SecurityTransactionTracker {
          */
         public final BigDecimal getCostBasis() {
             return securityLots.getTotalCostBasis();
+        }
+        
+        /**
+         * Retrieves the market value of the security lots for a given date.
+         * @param date The date of interest.
+         * @return The market value.
+         */
+        public final BigDecimal getMarketValue(LocalDate date) {
+            BigDecimal currentPrice = securityNode.getMarketPrice(date, securityNode.getReportedCurrencyNode());
+            BigDecimal value = currentPrice.multiply(securityLots.getTotalShares());
+            return value;
+        }
+
+        
+        @Override
+        public int compareTo(DateEntry o) {
+            return date.compareTo(o.date);
         }
         
     }
@@ -158,29 +183,59 @@ public class SecurityTransactionTracker {
         dateEntries.clear();
     }
     
+    protected void dumpTransaction(String title, LocalDate date, BigDecimal quantity, BigDecimal cashValue) {
+        System.out.println(title + "\t" + date + "\t" + quantity + "\t" + cashValue);
+    }
+    
     public final void recordTransaction(InvestmentTransaction transaction) {
+        LocalDate date = transaction.getLocalDate();
+        BigDecimal quantity = transaction.getQuantity();
+        BigDecimal cashValue = getTransactionCashValue(transaction);
+        Collection<SecurityLots.LotShares> lotShares = null;
+
+        //dumpTransaction(transaction.getTransactionType().toString(), date, quantity, cashValue);
+        
         SecurityLotAction action = null;
+        SecurityLot newLot;
         switch (transaction.getTransactionType()){
             case ADDSHARE:
+                newLot = newLotForTransaction(transaction);
+                action = new SecurityLotAction.AddLot(newLot);
+                break;
+                
             case BUYSHARE:
-                SecurityLot newLot = newLotForTransaction(transaction);
+                newLot = newLotForTransaction(transaction);
                 action = new SecurityLotAction.AddLot(newLot);
                 break;
                 
             case DIVIDEND:
                 break;
+                
             case REINVESTDIV:
                 break;
+                
             case REMOVESHARE:
                 break;
+                
             case RETURNOFCAPITAL:
                 break;
+                
             case SELLSHARE:
+                lotShares = getLotSharesFromTransaction(transaction);
+                if (lotShares == null) {
+                    action = new SecurityLotAction.SellFIFOShares(date, quantity);
+                }
+                else {
+                    action = new SecurityLotAction.SellSpecificLots(date, lotShares);
+                }
                 break;
+                
             case SPLITSHARE:
                 break;
+                
             case MERGESHARE:
                 break;
+                
             default:
                 throw new AssertionError(transaction.getTransactionType().name());
             
@@ -190,32 +245,55 @@ public class SecurityTransactionTracker {
             return;
         }
         
-        LocalDate date = transaction.getLocalDate();
         DateEntry previousDateEntry = dateEntries.floor(new DateEntry(date));
         SecurityLots previousLots;
+        List<SecurityLotAction> otherActions;
         if (previousDateEntry == null) {
             if (!(action instanceof SecurityLotAction.AddLot)) {
                 throw new IllegalArgumentException("Transactions before the first recorded must be either ADDSHARES or BUYSHARES!");
             }
             previousLots = new SecurityLots();
+            otherActions = null;
         }
         else {
             previousLots = previousDateEntry.getSecurityLots();
+            otherActions = (previousDateEntry.getDate().equals(date)) ? previousDateEntry.getSecurityLotActions() : null;
         }
         
         SecurityLots newLots = action.applyAction(previousLots);
         BigDecimal marketPrice = transaction.getSecurityNode().getMarketPrice(date, transaction.getInvestmentAccount().getCurrencyNode());
-        DateEntry dateEntry = new DateEntry(transaction.getLocalDate(), marketPrice, null, newLots);
+        
+        DateEntry dateEntry = new DateEntry(transaction.getLocalDate(), marketPrice, action, otherActions, newLots);
+        if (otherActions != null) {
+            dateEntries.remove(previousDateEntry);
+        }
         dateEntries.add(dateEntry);
     }
     
     protected SecurityLot newLotForTransaction(InvestmentTransaction transaction) {
         String lotId = SecurityLot.makeLotId();
         LocalDate date = transaction.getLocalDate();
-        BigDecimal shares = transaction.getQuantity().negate();
-        BigDecimal costBasis = transaction.getNetCashValue().negate();
+        BigDecimal shares = transaction.getQuantity();
+        BigDecimal costBasis = getTransactionCashValue(transaction);
         
         return new SecurityLot(lotId, date, shares, costBasis, null);
     }
     
+    protected BigDecimal getTransactionCashValue(InvestmentTransaction transaction) {
+        BigDecimal cashValue = transaction.getNetCashValue().setScale(securityNode.getScale(), MathConstants.roundingMode);
+        return cashValue;
+    }
+    
+    //
+    // TODO: Need a lot coding scheme for the InvestmentTransaction memo.
+    // For add/buy shares, could be just the date plus the occurance index for multiple occurances in a single date.
+    // For remove/sell shares, need to identify the lots:
+    // LOT xxx:nn
+    // xxx is the lot id,
+    // nn is the number of shares.
+    // Multiple lines by space separating the entries.
+    
+    protected Collection<SecurityLots.LotShares> getLotSharesFromTransaction(InvestmentTransaction transaction) {
+        return null;
+    }
 }
