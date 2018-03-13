@@ -15,6 +15,7 @@
  */
 package lbjgnash.ui.reportview;
 
+import com.leeboardtools.time.DateUtil;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -106,6 +107,13 @@ public class SecurityTransactionTracker {
         }
         
         /**
+         * @return The security node this represents.
+         */
+        public final SecurityNode getSecurityNode() {
+            return securityNode;
+        }
+        
+        /**
          * @return The security lots of this entry.
          */
         public final SecurityLots getSecurityLots() {
@@ -146,9 +154,58 @@ public class SecurityTransactionTracker {
          * @return The market value.
          */
         public final BigDecimal getMarketValue(LocalDate date) {
-            BigDecimal currentPrice = securityNode.getMarketPrice(date, securityNode.getReportedCurrencyNode());
+            BigDecimal currentPrice = getMarketPrice(date);
             BigDecimal value = currentPrice.multiply(securityLots.getTotalShares());
             return value;
+        }
+        
+        /**
+         * Retrieves the security price for a given date.
+         * @param date  The date of interest.
+         * @return The market value.
+         */
+        public final BigDecimal getMarketPrice(LocalDate date) {
+            BigDecimal currentPrice = securityNode.getMarketPrice(date, securityNode.getReportedCurrencyNode());
+            return currentPrice;
+        }
+        
+        /**
+         * Retrieves a weighted compound annual growth rate (CAGR) from a given date. The value returned
+         * is the sum of the annual rate of return of each lot multiplied by the current market
+         * price of the lot. To obtain the actual annual rate of return, divide by the market value
+         * at the passed in date.
+         * @param date  The date of interest.
+         * @param minDays   The minimum number of days before a rate of return is computed for a lot,
+         * that is, the lot's cost basis date must be at least this many days from date to be included.
+         * @return The sum of the weighted annual rate of returns of the lots.
+         */
+        public final BigDecimal getWeightedAnnualRateOfReturnSum(LocalDate date, int minDays) {
+            LocalDate cutoffDate = date.minusDays(minDays);
+            BigDecimal currentPrice = getMarketPrice(date);
+            BigDecimal weightedRateOfReturnSum = BigDecimal.ZERO;
+            
+            for (SecurityLot securityLot : securityLots.getSecurityLots()) {
+                if (!securityLot.getCostBasisDate().isBefore(cutoffDate)) {
+                    continue;
+                }
+                
+                BigDecimal costBasis = securityLot.getCostBasis();
+                if (costBasis.compareTo(BigDecimal.ZERO) == 0) {
+                    continue;
+                }
+                
+                BigDecimal value = securityLot.getShares().multiply(currentPrice);
+                double doubleValue = value.doubleValue();
+                
+                // (Ending/Begining)^(1/time) - 1
+                double time = DateUtil.getYearsUntil(securityLot.getCostBasisDate(), date);
+                double rateOfReturn = Math.pow(doubleValue / costBasis.doubleValue(), 1./time) - 1.;
+                rateOfReturn *= doubleValue;
+                
+                weightedRateOfReturnSum = weightedRateOfReturnSum.add(BigDecimal.valueOf(rateOfReturn));
+            }
+            
+            return weightedRateOfReturnSum;
         }
 
         

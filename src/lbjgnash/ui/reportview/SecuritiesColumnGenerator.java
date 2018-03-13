@@ -17,6 +17,7 @@ package lbjgnash.ui.reportview;
 
 import com.leeboardtools.util.ResourceSource;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -26,6 +27,7 @@ import javafx.scene.control.cell.TextFieldTreeTableCell;
 import jgnash.engine.Account;
 import jgnash.engine.AccountGroup;
 import jgnash.engine.SecurityNode;
+import org.hsqldb.lib.StringUtil;
 
 /**
  *
@@ -63,6 +65,7 @@ abstract class SecuritiesColumnGenerator extends ColumnGenerator {
         protected final ColumnEntry columnEntry;
         protected BigDecimal totalCostBasis = BigDecimal.ZERO;
         protected BigDecimal totalMarketValue = BigDecimal.ZERO;
+        protected BigDecimal weightedRateOfReturnSum = BigDecimal.ZERO;
         
         protected DatedSummaryEntryInfo(ColumnEntry columnEntry) {
             this.columnEntry = columnEntry;
@@ -88,13 +91,16 @@ abstract class SecuritiesColumnGenerator extends ColumnGenerator {
         protected final DateEntry dateEntry;
         protected final Map<SecurityRowEntry, DatedSecurityEntryInfo> datedSecurityEntryInfos = new HashMap<>();
         protected final Map<AccountEntry, DatedSummaryEntryInfo> datedSummaryEntryInfos = new HashMap<>();
+        protected final ColumnEntry columnEntry;
         
         protected BigDecimal totalCostBasis = BigDecimal.ZERO;
         protected BigDecimal totalMarketValue = BigDecimal.ZERO;
         protected BigDecimal annualPercentRateOfReturn = BigDecimal.ZERO;
+        protected BigDecimal weightedRateOfReturnSum = BigDecimal.ZERO;
         
-        protected DateEntryInfo(DateEntry dateEntry) {
+        protected DateEntryInfo(DateEntry dateEntry, ColumnEntry columnEntry) {
             this.dateEntry = dateEntry;
+            this.columnEntry = columnEntry;
         }
     }
     
@@ -114,6 +120,12 @@ abstract class SecuritiesColumnGenerator extends ColumnGenerator {
             super(rowEntry, value);
             this.datedSecurityEntryInfo = null;
             this.datedSummaryEntryInfo = datedSummaryEntryInfo;
+        }
+        
+        protected SecurityCellEntry(RowEntry rowEntry, String value) {
+            super(rowEntry, value);
+            this.datedSecurityEntryInfo = null;
+            this.datedSummaryEntryInfo = null;
         }
     }
     
@@ -273,21 +285,10 @@ abstract class SecuritiesColumnGenerator extends ColumnGenerator {
         }
     }
 
-    /*
-                                    Total?
-        COST_BASIS                  Yes
-        GAIN                        Yes
-        QUANTITY                    -
-        PRICE                       -
-        PERCENT_PORTFOLIO           Yes
-        ANNUAL_RATE_OF_RETURN       Yes
-        MARKET_VALUE                Yes
-    
-    */
     
     protected DateEntryInfo createDateEntryInfo(AccountEntryInfo accountEntryInfo, DateEntry dateEntry, 
             ColumnEntry columnEntry, ReportDataView.ReportOutput reportOutput, int columnIndexBase) {
-        return new DateEntryInfo(dateEntry);
+        return new DateEntryInfo(dateEntry, columnEntry);
     }
     
     
@@ -301,6 +302,7 @@ abstract class SecuritiesColumnGenerator extends ColumnGenerator {
             return new DatedSecurityEntryInfo(securityRowEntry, trackerDateEntry, columnEntry);
         }
         else {
+            // TODO: Treat cash as a security in the security tracking stuff!
             // Cash entry...
             return new DatedSecurityEntryInfo(securityRowEntry, null, columnEntry);
         }
@@ -316,17 +318,24 @@ abstract class SecuritiesColumnGenerator extends ColumnGenerator {
     
     protected void updateDatedSummaryEntryInfo(DatedSummaryEntryInfo datedSummaryEntryInfo, DatedSecurityEntryInfo datedSecurityEntryInfo,
             DateEntryInfo dateEntryInfo, ReportDataView.ReportOutput reportOutput) {
+        LocalDate date = dateEntryInfo.dateEntry.endDate;
+        
         Account account = datedSecurityEntryInfo.securityRowEntry.accountEntry.account;
 
         BigDecimal costBasis = datedSecurityEntryInfo.trackerDateEntry.getCostBasis();
         datedSummaryEntryInfo.totalCostBasis = datedSummaryEntryInfo.totalCostBasis.add(costBasis);
         dateEntryInfo.totalCostBasis = dateEntryInfo.totalCostBasis.add(costBasis);
         
-        BigDecimal marketValue = datedSecurityEntryInfo.trackerDateEntry.getMarketValue(dateEntryInfo.dateEntry.endDate);
+        BigDecimal marketValue = datedSecurityEntryInfo.trackerDateEntry.getMarketValue(date);
         marketValue = reportOutput.toMonetaryValue(marketValue, account);
         
         datedSummaryEntryInfo.totalMarketValue = datedSummaryEntryInfo.totalMarketValue.add(marketValue);
         dateEntryInfo.totalMarketValue = dateEntryInfo.totalMarketValue.add(marketValue);
+        
+        BigDecimal weightedRateOfReturnSum = datedSecurityEntryInfo.trackerDateEntry.getWeightedAnnualRateOfReturnSum(date, 
+                reportOutput.getMinDaysForRateOfReturn());
+        datedSummaryEntryInfo.weightedRateOfReturnSum = datedSummaryEntryInfo.weightedRateOfReturnSum.add(weightedRateOfReturnSum);
+        dateEntryInfo.weightedRateOfReturnSum = dateEntryInfo.weightedRateOfReturnSum.add(weightedRateOfReturnSum);
     }
 
     
@@ -387,6 +396,15 @@ abstract class SecuritiesColumnGenerator extends ColumnGenerator {
 
     @Override
     protected void updateGrandTotalCellValue(DateEntry dateEntry, ReportDataView.ReportOutput reportOutput) {
+        DateEntryInfo dateEntryInfo = dateEntryInfos.get(dateEntry);
+        if (dateEntryInfo != null) {
+            String value = getGrandTotalCellValue(dateEntryInfo, reportOutput);
+            if (!StringUtil.isEmpty(value)) {
+                ColumnEntry columnEntry = dateEntryInfo.columnEntry;
+                CellEntry cellEntry = new SecurityCellEntry(reportOutput.grandTotalRowEntry, value);
+                reportOutput.grandTotalRowEntry.setNonExpandedColumnCellValue(columnEntry, cellEntry);
+            }
+        }
         super.updateGrandTotalCellValue(dateEntry, reportOutput); //To change body of generated methods, choose Tools | Templates.
     }
 
@@ -396,9 +414,7 @@ abstract class SecuritiesColumnGenerator extends ColumnGenerator {
     
     protected String getCashEntryCellValue(DatedSecurityEntryInfo securityEntryInfo, DatedSummaryEntryInfo datedSummaryEntryInfo, 
             DateEntryInfo dateEntryInfo, ReportDataView.ReportOutput reportOutput) {
-        Account account = securityEntryInfo.securityRowEntry.accountEntry.account;
-        BigDecimal balance = account.getBalance(dateEntryInfo.dateEntry.endDate);
-        return reportOutput.toMonetaryValueString(balance, account);
+        return null;
     }
 
     
@@ -408,6 +424,10 @@ abstract class SecuritiesColumnGenerator extends ColumnGenerator {
     
     protected String getSummaryEntryCellValue(DatedSummaryEntryInfo datedSummaryEntryInfo, 
             AccountEntryInfo accountEntryInfo, DateEntryInfo dateEntryInfo, ReportDataView.ReportOutput reportOutput) {
+        return null;
+    }
+    
+    protected String getGrandTotalCellValue(DateEntryInfo dateEntryInfo, ReportDataView.ReportOutput reportOutput) {
         return null;
     }
 }

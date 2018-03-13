@@ -17,42 +17,35 @@ package lbjgnash.ui.reportview;
 
 import com.leeboardtools.util.ResourceSource;
 import java.math.BigDecimal;
-import jgnash.engine.Account;
 
 /**
  *
  * @author Albert Santos
  */
-public class MarketValueColumnGenerator extends SecuritiesColumnGenerator {
+public class AnnualRateOfReturnColumnGenerator extends SecuritiesColumnGenerator {
 
     @Override
     protected String getColumnTitle(AccountEntry accountEntry, DateEntry dateEntry, ReportDataView.ReportOutput reportOutput) {
-        return ResourceSource.getString("Report.ColumnHeading.MarketValue");
+        return ResourceSource.getString("Report.ColumnHeading.AnnualRateOfReturn");
     }
 
     @Override
     protected String getSecurityEntryCellValue(DatedSecurityEntryInfo securityEntryInfo, DateEntryInfo dateEntryInfo, ReportDataView.ReportOutput reportOutput) {
-        BigDecimal value = securityEntryInfo.trackerDateEntry.getMarketValue(dateEntryInfo.dateEntry.endDate);
-        return reportOutput.toMonetaryValueString(value, securityEntryInfo.securityRowEntry.accountEntry.account);
-    }
-
-    @Override
-    protected String getCashEntryCellValue(DatedSecurityEntryInfo securityEntryInfo, DatedSummaryEntryInfo datedSummaryEntryInfo, 
-            DateEntryInfo dateEntryInfo, ReportDataView.ReportOutput reportOutput) {
-        Account account = securityEntryInfo.securityRowEntry.accountEntry.account;
-        BigDecimal balance = account.getBalance(dateEntryInfo.dateEntry.endDate);
-        return reportOutput.toMonetaryValueString(balance, account);
+        BigDecimal sumOfWeightedRateOfReturns = securityEntryInfo.trackerDateEntry.getWeightedAnnualRateOfReturnSum(
+                dateEntryInfo.dateEntry.endDate, reportOutput.getMinDaysForRateOfReturn());
+        BigDecimal totalValue =  securityEntryInfo.trackerDateEntry.getMarketValue(dateEntryInfo.dateEntry.endDate);
+        return reportOutput.toPercentString(sumOfWeightedRateOfReturns, totalValue);
     }
 
     @Override
     protected String getSummaryEntryCellValue(DatedSummaryEntryInfo datedAccountEntryInfo, AccountEntryInfo accountEntryInfo, DateEntryInfo dateEntryInfo, ReportDataView.ReportOutput reportOutput) {
-        BigDecimal value = datedAccountEntryInfo.totalMarketValue;
-        return reportOutput.toMonetaryValueString(value, accountEntryInfo.accountEntry.account);
+        BigDecimal totalValue = datedAccountEntryInfo.totalMarketValue;
+        return reportOutput.toPercentString(datedAccountEntryInfo.weightedRateOfReturnSum, totalValue);
     }
     
     @Override
     protected String getGrandTotalCellValue(DateEntryInfo dateEntryInfo, ReportDataView.ReportOutput reportOutput) {
-        BigDecimal value = dateEntryInfo.totalMarketValue;
-        return reportOutput.toMonetaryValueString(value, null);
+        BigDecimal totalValue = dateEntryInfo.totalMarketValue;
+        return reportOutput.toPercentString(dateEntryInfo.weightedRateOfReturnSum, totalValue);
     }
 }

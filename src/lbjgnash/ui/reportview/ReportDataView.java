@@ -37,6 +37,7 @@ import jgnash.engine.Account;
 import jgnash.engine.AccountGroup;
 import jgnash.engine.Engine;
 import jgnash.engine.MathConstants;
+import jgnash.engine.SecurityNode;
 import lbjgnash.ui.AccountFilter;
 import lbjgnash.ui.ReportDefinition;
 
@@ -88,7 +89,7 @@ public class ReportDataView {
         }
 
         public String toPercentString(BigDecimal numerator, BigDecimal denominator) {
-            numerator = numerator.multiply(ReportDataView.ONE_HUNDRED).setScale(1);
+            numerator = numerator.multiply(ReportDataView.ONE_HUNDRED).setScale(1, MathConstants.roundingMode);
             try {
                 BigDecimal value = numerator.divide(denominator, MathConstants.roundingMode);
                 return value.toPlainString() + percentSuffix;
@@ -98,7 +99,15 @@ public class ReportDataView {
         }
         
         public String toSharesQuantity(BigDecimal value) {
-            return value.setScale(4).toPlainString();
+            return value.setScale(4, MathConstants.roundingMode).toPlainString();
+        }
+        
+        public String toSecurityPrice(BigDecimal value, SecurityNode securityNode) {
+            return value.setScale(2, MathConstants.roundingMode).toPlainString();
+        }
+        
+        public int getMinDaysForRateOfReturn() {
+            return 5;
         }
     }
     
@@ -364,22 +373,25 @@ public class ReportDataView {
                 return new PercentDeltaPeriodColumnGenerator(ReferencePeriodType.OLDEST);
                 
             case COST_BASIS:
-                break;
+                return new CostBasisColumnGenerator();
                 
             case GAIN:
-                break;
+                return new GainColumnGenerator();
+                
+            case PERCENT_GAIN :
+                return new PercentGainColumnGenerator();
                 
             case QUANTITY:
                 return new QuantityColumnGenerator();
                 
             case PRICE:
-                break;
+                return new PriceColumnGenerator();
                 
             case PERCENT_PORTFOLIO :
-                break;
+                return new PercentPortfolioColumnGenerator();
                 
             case ANNUAL_RATE_OF_RETURN :
-                break;
+                return new AnnualRateOfReturnColumnGenerator();
                 
             case MARKET_VALUE :
                 return new MarketValueColumnGenerator();
@@ -388,7 +400,6 @@ public class ReportDataView {
                 throw new AssertionError(columnType.name());
             
         }
-        return null;
     }
 
     //

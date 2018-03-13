@@ -289,4 +289,17 @@ public class DateUtil {
         
     }
     
+    
+    /**
+     * Retrieves the time between two dates, in years, including fractions of a year.
+     * Currently this is fairly simple, it only takes the number of days and divides by 365.25.
+     * @param baseDate  The reference date.
+     * @param toDate    The 'to' date.
+     * @return The number of years, including fraction. &gt; 0 if toDate is after baseDate.
+     */
+    public static double getYearsUntil(LocalDate baseDate, LocalDate toDate) {
+        // TODO Need to handle leap years...
+        long deltaDays = baseDate.until(toDate, ChronoUnit.DAYS);
+        return deltaDays / 365.25;
+    }
 }

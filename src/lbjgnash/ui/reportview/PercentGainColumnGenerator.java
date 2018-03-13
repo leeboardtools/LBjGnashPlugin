@@ -17,42 +17,35 @@ package lbjgnash.ui.reportview;
 
 import com.leeboardtools.util.ResourceSource;
 import java.math.BigDecimal;
-import jgnash.engine.Account;
 
 /**
  *
  * @author Albert Santos
  */
-public class MarketValueColumnGenerator extends SecuritiesColumnGenerator {
+public class PercentGainColumnGenerator extends SecuritiesColumnGenerator {
 
     @Override
     protected String getColumnTitle(AccountEntry accountEntry, DateEntry dateEntry, ReportDataView.ReportOutput reportOutput) {
-        return ResourceSource.getString("Report.ColumnHeading.MarketValue");
+        return ResourceSource.getString("Report.ColumnHeading.PercentGain");
     }
 
     @Override
     protected String getSecurityEntryCellValue(DatedSecurityEntryInfo securityEntryInfo, DateEntryInfo dateEntryInfo, ReportDataView.ReportOutput reportOutput) {
+        BigDecimal costBasis = securityEntryInfo.trackerDateEntry.getCostBasis();
         BigDecimal value = securityEntryInfo.trackerDateEntry.getMarketValue(dateEntryInfo.dateEntry.endDate);
-        return reportOutput.toMonetaryValueString(value, securityEntryInfo.securityRowEntry.accountEntry.account);
-    }
-
-    @Override
-    protected String getCashEntryCellValue(DatedSecurityEntryInfo securityEntryInfo, DatedSummaryEntryInfo datedSummaryEntryInfo, 
-            DateEntryInfo dateEntryInfo, ReportDataView.ReportOutput reportOutput) {
-        Account account = securityEntryInfo.securityRowEntry.accountEntry.account;
-        BigDecimal balance = account.getBalance(dateEntryInfo.dateEntry.endDate);
-        return reportOutput.toMonetaryValueString(balance, account);
+        value = value.subtract(costBasis);
+        return reportOutput.toPercentString(value, costBasis);
     }
 
     @Override
     protected String getSummaryEntryCellValue(DatedSummaryEntryInfo datedAccountEntryInfo, AccountEntryInfo accountEntryInfo, DateEntryInfo dateEntryInfo, ReportDataView.ReportOutput reportOutput) {
-        BigDecimal value = datedAccountEntryInfo.totalMarketValue;
-        return reportOutput.toMonetaryValueString(value, accountEntryInfo.accountEntry.account);
+        BigDecimal value = datedAccountEntryInfo.totalMarketValue.subtract(datedAccountEntryInfo.totalCostBasis);
+        return reportOutput.toPercentString(value, datedAccountEntryInfo.totalCostBasis);
     }
     
     @Override
     protected String getGrandTotalCellValue(DateEntryInfo dateEntryInfo, ReportDataView.ReportOutput reportOutput) {
-        BigDecimal value = dateEntryInfo.totalMarketValue;
-        return reportOutput.toMonetaryValueString(value, null);
+        BigDecimal value = dateEntryInfo.totalMarketValue.subtract(dateEntryInfo.totalCostBasis);
+        return reportOutput.toPercentString(value, dateEntryInfo.totalCostBasis);
     }
 }

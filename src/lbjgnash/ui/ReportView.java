@@ -89,7 +89,7 @@ public class ReportView {
         
         this.stage.setScene(this.mainScene);
         
-        this.mainVBox.setPrefSize(800, 600);
+        this.mainVBox.setPrefSize(1000, 600);
         
         setupEngineListeners();
         

@@ -209,6 +209,7 @@ public class ReportDefinition extends CompositeObservable {
         PERCENT_DELTA_OLDEST_PERIOD("ReportDefinition.ColumnType.PercentDeltaOldesPeriod"),
         COST_BASIS("ReportDefinition.ColumnType.CostBasis"),
         GAIN("ReportDefinition.ColumnType.Gain"),
+        PERCENT_GAIN("ReportDefinition.ColumnType.PercentGain"),
         QUANTITY("ReportDefinition.ColumnType.Quantity"),
         PRICE("ReportDefinition.ColumnType.Price"),
         PERCENT_PORTFOLIO("ReportDefinition.ColumnType.PercentPortfolio"),
@@ -304,8 +305,9 @@ public class ReportDefinition extends CompositeObservable {
         definition.getColumnTypes().add(ColumnType.QUANTITY);
         definition.getColumnTypes().add(ColumnType.PRICE);
         definition.getColumnTypes().add(ColumnType.COST_BASIS);
+        definition.getColumnTypes().add(ColumnType.MARKET_VALUE);
         definition.getColumnTypes().add(ColumnType.GAIN);
-        definition.getColumnTypes().add(ColumnType.VALUE);
+        definition.getColumnTypes().add(ColumnType.PERCENT_GAIN);
         definition.getColumnTypes().add(ColumnType.PERCENT_PORTFOLIO);
         
         return definition;
