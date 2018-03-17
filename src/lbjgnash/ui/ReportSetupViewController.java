@@ -209,10 +209,15 @@ public class ReportSetupViewController implements Initializable {
                 return;
             }
             
+            DateOffset.Basic rangeOffset;
             if (style.usesRangeDateOffset()) {
                 if (!this.rangeController.validate()) {
                     return;
                 }
+                rangeOffset = this.rangeController.getRangeDateOffset();
+            }
+            else {
+                rangeOffset = null;
             }
 
             PeriodicDateGenerator dateGenerator = this.periodicDateController.getPeriodicDateGenerator();
@@ -220,7 +225,6 @@ public class ReportSetupViewController implements Initializable {
                 this.definition.setDateGenerator(dateGenerator);
             }
             
-            DateOffset.Basic rangeOffset = this.rangeController.getRangeDateOffset();
             this.definition.setRangeDateOffset(rangeOffset);
 
             this.definition.setTitle(this.titleEdit.getText());

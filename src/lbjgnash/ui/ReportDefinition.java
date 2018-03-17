@@ -267,6 +267,7 @@ public class ReportDefinition extends CompositeObservable {
         definition.setStyle(Style.NET_WORTH);
         
         definition.setDateGenerator(new PeriodicDateGenerator(DateOffset.SAME_DAY, DateOffset.END_OF_LAST_YEAR, 0));
+        definition.setRangeDateOffset(null);
 
         definition.getAccountFilter().getAccountGroupsToInclude().add(AccountGroup.ASSET);
         definition.getAccountFilter().getAccountGroupsToInclude().add(AccountGroup.INVEST);
@@ -305,15 +306,7 @@ public class ReportDefinition extends CompositeObservable {
         definition.setStyle(Style.PORTFOLIO);
 
         definition.setDateGenerator(new PeriodicDateGenerator(DateOffset.SAME_DAY, DateOffset.END_OF_LAST_YEAR, 0));
-        //definition.setRangeDateOffset(new DateOffset.Basic(DateOffset.Interval.YEAR, -1, DateOffset.IntervalRelation.FIRST_DAY));
-        
-        // startDateOffset: Interval DAY, intervalOffset 0, intervalRelation CURRENT_DAY
-        // periodDateOffset: interval YEAR intervalOffset 1 intervalRelation CURRENT_DAY
-        // periodCount: 0
-        // endDateOffset: null
-        
-        // RangeDateOffset: interval: MONTH intervalOffset 1 intervalRelation CURRENT_DAY
-        
+        definition.setRangeDateOffset(null);
 
         definition.getAccountFilter().getAccountGroupsToInclude().add(AccountGroup.INVEST);
         definition.getAccountFilter().getAccountGroupsToInclude().add(AccountGroup.SIMPLEINVEST);

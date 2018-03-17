@@ -15,6 +15,7 @@
  */
 package lbjgnash.ui;
 
+import com.leeboardtools.util.ResourceSource;
 import lbjgnash.ui.reportview.ReportDataView;
 import com.leeboardtools.util.StringUtil;
 import java.util.ArrayList;
@@ -24,8 +25,12 @@ import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Control;
 import javafx.scene.control.Label;
+import javafx.scene.control.MenuButton;
+import javafx.scene.control.MenuItem;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import jgnash.engine.Engine;
@@ -111,16 +116,48 @@ public class ReportView {
     
     protected void setupReportHeader() {
         if (this.titleLabel == null) {
-            HBox hBox = new HBox();
-            hBox.setAlignment(Pos.CENTER);
-            hBox.getStyleClass().add(CLASS_TITLE_LABEL_CONTAINER);
+            BorderPane borderPaneHeader = new BorderPane();
+            
+            HBox hBoxTitle = new HBox();
+            hBoxTitle.setAlignment(Pos.CENTER);
+            hBoxTitle.getStyleClass().add(CLASS_TITLE_LABEL_CONTAINER);
             
             this.titleLabel = new Label();
             this.titleLabel.getStyleClass().add(CLASS_TITLE_LABEL);
-            hBox.getChildren().add(this.titleLabel);
+            hBoxTitle.getChildren().add(this.titleLabel);
             
-            this.mainVBox.getChildren().add(hBox);
+            borderPaneHeader.setCenter(hBoxTitle);
+            
+            
+            HBox hBoxMenuButton = new HBox();
+            hBoxMenuButton.setAlignment(Pos.CENTER_RIGHT);
+            hBoxMenuButton.setPrefSize(Region.USE_COMPUTED_SIZE, Region.USE_COMPUTED_SIZE);
+            
+            MenuButton menuButton = new MenuButton();
+            menuButton.setPrefSize(Region.USE_COMPUTED_SIZE, Region.USE_COMPUTED_SIZE);
+            menuButton.setText(ResourceSource.getString("ReportView.Menu.Options"));
+            
+            setupReportMenu(menuButton);
+            
+            hBoxMenuButton.getChildren().add(menuButton);
+            borderPaneHeader.setRight(hBoxMenuButton);
+            
+            this.mainVBox.getChildren().add(borderPaneHeader);
         }
+    }
+    
+    protected void setupReportMenu(MenuButton menuButton) {
+        MenuItem configureItem = new MenuItem(ResourceSource.getString("ReportView.MenuItem.Configure"));
+        menuButton.getItems().add(configureItem);
+        configureItem.setOnAction((event) -> {
+            onConfigureReport();
+        });
+
+        MenuItem saveItem = new MenuItem(ResourceSource.getString("ReportView.MenuItem.Save"));
+        menuButton.getItems().add(saveItem);        
+        saveItem.setOnAction((event) -> {
+            onSaveReport();
+        });
     }
     
     protected void setupReportArea() {
@@ -163,6 +200,20 @@ public class ReportView {
     }
     
     
+    protected void onConfigureReport() {
+        if (ReportSetupView.showAndWait(reportLabel, definition, engine, stage)) {
+            refreshFromDefinition();
+        }
+    }
+    
+    protected void onSaveReport() {
+        
+    }
+    
+    
+    //
+    // This is all report view manage stuff below...
+    //
     public static class ReportViewEntry {
         private final String reportLabel;
         private final ReportView reportView;

@@ -24,7 +24,6 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.TreeSet;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 import jgnash.engine.Account;
 import jgnash.engine.AccountGroup;
