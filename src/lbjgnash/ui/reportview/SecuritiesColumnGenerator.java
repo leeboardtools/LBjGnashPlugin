@@ -65,7 +65,7 @@ abstract class SecuritiesColumnGenerator extends ColumnGenerator {
         protected final ColumnEntry columnEntry;
         protected BigDecimal totalCostBasis = BigDecimal.ZERO;
         protected BigDecimal totalMarketValue = BigDecimal.ZERO;
-        protected BigDecimal weightedRateOfReturnSum = BigDecimal.ZERO;
+        protected BigDecimal yearAgoValueSum = BigDecimal.ZERO;
         
         protected DatedSummaryEntryInfo(ColumnEntry columnEntry) {
             this.columnEntry = columnEntry;
@@ -96,7 +96,7 @@ abstract class SecuritiesColumnGenerator extends ColumnGenerator {
         protected BigDecimal totalCostBasis = BigDecimal.ZERO;
         protected BigDecimal totalMarketValue = BigDecimal.ZERO;
         protected BigDecimal annualPercentRateOfReturn = BigDecimal.ZERO;
-        protected BigDecimal weightedRateOfReturnSum = BigDecimal.ZERO;
+        protected BigDecimal yearAgoValueSum = BigDecimal.ZERO;
         
         protected DateEntryInfo(DateEntry dateEntry, ColumnEntry columnEntry) {
             this.dateEntry = dateEntry;
@@ -197,15 +197,12 @@ abstract class SecuritiesColumnGenerator extends ColumnGenerator {
                 else {
                     accountEntryInfo = new AccountEntryInfo(accountEntry);
                     accountEntryInfos.put(accountEntry, accountEntryInfo);
+                    accountEntry.useSummaryRowEntry();
                 }
 
                 for (Map.Entry<SecurityNode, SecurityTransactionTracker> entry : accountTracker.getTransactionTrackers().entrySet()) {
                     SecurityTransactionTracker transactionTracker = entry.getValue();
                     addSecurityRowEntry(transactionTracker, accountEntryInfo);
-                }
-                
-                if (accountEntryInfo.accountEntry == accountEntry) {
-                    addCashRowEntry(accountEntryInfo);
                 }
                 
                 isPossibleCashRow = false;
@@ -217,7 +214,18 @@ abstract class SecuritiesColumnGenerator extends ColumnGenerator {
         if (isPossibleCashRow && (accountEntry.summaryRowEntry != null)) {
             AccountEntryInfo accountEntryInfo = accountEntryInfos.get(accountEntry);
             if (accountEntryInfo != null) {
-                addCashRowEntry(accountEntryInfo);
+                AccountSecuritiesTracker accountTracker = accountEntry.getAccountSecuritiesTracker();
+                if (accountTracker != null) {
+                    //addCashRowEntry(accountEntryInfo);
+                    accountEntry.useSummaryRowEntry();
+                    for (Map.Entry<SecurityNode, SecurityTransactionTracker> entry : accountTracker.getTransactionTrackers().entrySet()) {
+                        SecurityTransactionTracker transactionTracker = entry.getValue();
+                        addSecurityRowEntry(transactionTracker, accountEntryInfo);
+                    }
+                }
+                else {
+                    addCashRowEntry(accountEntryInfo);
+                }
             }
         }
     }
@@ -332,10 +340,10 @@ abstract class SecuritiesColumnGenerator extends ColumnGenerator {
         datedSummaryEntryInfo.totalMarketValue = datedSummaryEntryInfo.totalMarketValue.add(marketValue);
         dateEntryInfo.totalMarketValue = dateEntryInfo.totalMarketValue.add(marketValue);
         
-        BigDecimal weightedRateOfReturnSum = datedSecurityEntryInfo.trackerDateEntry.getWeightedAnnualRateOfReturnSum(date, 
+        BigDecimal yearAgoValueSum = datedSecurityEntryInfo.trackerDateEntry.getYearAgoValueSum(date, 
                 reportOutput.getMinDaysForRateOfReturn());
-        datedSummaryEntryInfo.weightedRateOfReturnSum = datedSummaryEntryInfo.weightedRateOfReturnSum.add(weightedRateOfReturnSum);
-        dateEntryInfo.weightedRateOfReturnSum = dateEntryInfo.weightedRateOfReturnSum.add(weightedRateOfReturnSum);
+        datedSummaryEntryInfo.yearAgoValueSum = datedSummaryEntryInfo.yearAgoValueSum.add(yearAgoValueSum);
+        dateEntryInfo.yearAgoValueSum = dateEntryInfo.yearAgoValueSum.add(yearAgoValueSum);
     }
 
     

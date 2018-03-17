@@ -32,7 +32,6 @@ import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.util.StringConverter;
 import jgnash.engine.AccountGroup;
-import jgnash.engine.AccountType;
 
 /**
  *
@@ -268,16 +267,19 @@ public class ReportDefinition extends CompositeObservable {
         definition.setStyle(Style.NET_WORTH);
         
         definition.setDateGenerator(new PeriodicDateGenerator(DateOffset.SAME_DAY, DateOffset.END_OF_LAST_YEAR, 0));
+
         definition.getAccountFilter().getAccountGroupsToInclude().add(AccountGroup.ASSET);
         definition.getAccountFilter().getAccountGroupsToInclude().add(AccountGroup.INVEST);
         definition.getAccountFilter().getAccountGroupsToInclude().add(AccountGroup.SIMPLEINVEST);
         definition.getAccountFilter().getAccountGroupsToInclude().add(AccountGroup.LIABILITY);
+
         definition.getColumnTypes().add(ColumnType.VALUE);
         
         definition.setGrandTotalText(ResourceSource.getString("Report.GrandTotal.NetWorth"));
         
         return definition;
     }
+    
     
     public static ReportDefinition standardIncomeExpenseDefinition() {
         ReportDefinition definition = new ReportDefinition();
@@ -286,13 +288,16 @@ public class ReportDefinition extends CompositeObservable {
         
         definition.setDateGenerator(new PeriodicDateGenerator(DateOffset.SAME_DAY, DateOffset.END_OF_LAST_YEAR, 0));
         definition.setRangeDateOffset(new DateOffset.Basic(DateOffset.Interval.YEAR, 1, DateOffset.IntervalRelation.FIRST_DAY));
+
         definition.getAccountFilter().getAccountGroupsToInclude().add(AccountGroup.INCOME);
         definition.getAccountFilter().getAccountGroupsToInclude().add(AccountGroup.EXPENSE);
+
         definition.getColumnTypes().add(ColumnType.VALUE);
         
         definition.setGrandTotalText(ResourceSource.getString("Report.GrandTotal.IncomeExpense"));
         return definition;
     }
+    
     
     public static ReportDefinition standardPortfolioDefinition() {
         ReportDefinition definition = new ReportDefinition();
@@ -300,8 +305,19 @@ public class ReportDefinition extends CompositeObservable {
         definition.setStyle(Style.PORTFOLIO);
 
         definition.setDateGenerator(new PeriodicDateGenerator(DateOffset.SAME_DAY, DateOffset.END_OF_LAST_YEAR, 0));
-        definition.getAccountFilter().getAccountTypesToInclude().add(AccountType.CASH);
+        //definition.setRangeDateOffset(new DateOffset.Basic(DateOffset.Interval.YEAR, -1, DateOffset.IntervalRelation.FIRST_DAY));
+        
+        // startDateOffset: Interval DAY, intervalOffset 0, intervalRelation CURRENT_DAY
+        // periodDateOffset: interval YEAR intervalOffset 1 intervalRelation CURRENT_DAY
+        // periodCount: 0
+        // endDateOffset: null
+        
+        // RangeDateOffset: interval: MONTH intervalOffset 1 intervalRelation CURRENT_DAY
+        
+
         definition.getAccountFilter().getAccountGroupsToInclude().add(AccountGroup.INVEST);
+        definition.getAccountFilter().getAccountGroupsToInclude().add(AccountGroup.SIMPLEINVEST);
+        
         definition.getColumnTypes().add(ColumnType.QUANTITY);
         definition.getColumnTypes().add(ColumnType.PRICE);
         definition.getColumnTypes().add(ColumnType.COST_BASIS);
@@ -309,6 +325,9 @@ public class ReportDefinition extends CompositeObservable {
         definition.getColumnTypes().add(ColumnType.GAIN);
         definition.getColumnTypes().add(ColumnType.PERCENT_GAIN);
         definition.getColumnTypes().add(ColumnType.PERCENT_PORTFOLIO);
+        definition.getColumnTypes().add(ColumnType.ANNUAL_RATE_OF_RETURN);
+
+        definition.setGrandTotalText(ResourceSource.getString("Report.GrandTotal.Portfolio"));
         
         return definition;
     }

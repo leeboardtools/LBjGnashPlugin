@@ -31,21 +31,24 @@ public class AnnualRateOfReturnColumnGenerator extends SecuritiesColumnGenerator
 
     @Override
     protected String getSecurityEntryCellValue(DatedSecurityEntryInfo securityEntryInfo, DateEntryInfo dateEntryInfo, ReportDataView.ReportOutput reportOutput) {
-        BigDecimal sumOfWeightedRateOfReturns = securityEntryInfo.trackerDateEntry.getWeightedAnnualRateOfReturnSum(
+        BigDecimal yearAgoValueSum = securityEntryInfo.trackerDateEntry.getYearAgoValueSum(
                 dateEntryInfo.dateEntry.endDate, reportOutput.getMinDaysForRateOfReturn());
         BigDecimal totalValue =  securityEntryInfo.trackerDateEntry.getMarketValue(dateEntryInfo.dateEntry.endDate);
-        return reportOutput.toPercentString(sumOfWeightedRateOfReturns, totalValue);
+        BigDecimal numerator = totalValue.subtract(yearAgoValueSum);
+        return reportOutput.toPercentString(numerator, yearAgoValueSum);
     }
 
     @Override
     protected String getSummaryEntryCellValue(DatedSummaryEntryInfo datedAccountEntryInfo, AccountEntryInfo accountEntryInfo, DateEntryInfo dateEntryInfo, ReportDataView.ReportOutput reportOutput) {
         BigDecimal totalValue = datedAccountEntryInfo.totalMarketValue;
-        return reportOutput.toPercentString(datedAccountEntryInfo.weightedRateOfReturnSum, totalValue);
+        BigDecimal numerator = totalValue.subtract(datedAccountEntryInfo.yearAgoValueSum);
+        return reportOutput.toPercentString(numerator, datedAccountEntryInfo.yearAgoValueSum);
     }
     
     @Override
     protected String getGrandTotalCellValue(DateEntryInfo dateEntryInfo, ReportDataView.ReportOutput reportOutput) {
         BigDecimal totalValue = dateEntryInfo.totalMarketValue;
-        return reportOutput.toPercentString(dateEntryInfo.weightedRateOfReturnSum, totalValue);
+        BigDecimal numerator = totalValue.subtract(dateEntryInfo.yearAgoValueSum);
+        return reportOutput.toPercentString(numerator, dateEntryInfo.yearAgoValueSum);
     }
 }

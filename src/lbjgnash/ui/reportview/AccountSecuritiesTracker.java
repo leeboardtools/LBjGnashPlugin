@@ -15,11 +15,16 @@
  */
 package lbjgnash.ui.reportview;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import jgnash.engine.Account;
+import jgnash.engine.AccountGroup;
+import jgnash.engine.CurrencyNode;
 import jgnash.engine.InvestmentTransaction;
 import jgnash.engine.SecurityNode;
+import jgnash.engine.Transaction;
 
 /**
  *
@@ -28,9 +33,16 @@ import jgnash.engine.SecurityNode;
 public class AccountSecuritiesTracker {
     private final Account account;
     private final SortedMap<SecurityNode, SecurityTransactionTracker> transactionTrackers = new TreeMap<>();
+    private final SecurityNode cashSecurityNode = new SecurityNode() {
+        @Override
+        public BigDecimal getMarketPrice(LocalDate date, CurrencyNode node) {
+            return BigDecimal.ONE;
+        }
+    };
     
     AccountSecuritiesTracker(Account account) {
         this.account = account;
+        this.cashSecurityNode.setSymbol("Cash");
     }
     
     public final Account getAccount() {
@@ -46,6 +58,13 @@ public class AccountSecuritiesTracker {
             case INVEST:
             case SIMPLEINVEST:
                 break;
+                
+            case ASSET:
+                if (isSecuritiesCashAccount(account)) {
+                    break;
+                }
+                return null;
+                
             default :
                 return null;
         }
@@ -55,12 +74,35 @@ public class AccountSecuritiesTracker {
         return tracker;
     }
     
+    public static boolean isSecuritiesCashAccount(Account account) {
+        if (account.getAccountType().getAccountGroup() != AccountGroup.ASSET) {
+            return false;
+        }
+        
+        // A securities cash account either has securities, or contains child accounts
+        // that have securities.
+        if (!account.getUsedSecurities().isEmpty()) {
+            return true;
+        }
+        
+        for (Account childAccount : account.getChildren()) {
+            if (!childAccount.getUsedSecurities().isEmpty()) {
+                return true;
+            }
+        }
+        return false;
+    }
     
     protected void loadSecurities() {
         transactionTrackers.clear();
+        final boolean isCashOnly = account.getSecurities().isEmpty();
+        
         account.getSortedTransactionList().forEach((transaction) -> {
-            if (transaction instanceof InvestmentTransaction) {
+            if (!isCashOnly && (transaction instanceof InvestmentTransaction)) {
                 addInvestmentTransaction((InvestmentTransaction)transaction);
+            }
+            else {
+                addCashTransaction(transaction);
             }
         });
     }
@@ -74,5 +116,20 @@ public class AccountSecuritiesTracker {
         }
         
         tracker.recordTransaction(transaction);
+    }
+    
+    protected void addCashTransaction(Transaction transaction) {
+        BigDecimal amount = transaction.getAmount(account);
+        if (amount.compareTo(BigDecimal.ZERO) == 0) {
+            return;
+        }
+        
+        SecurityTransactionTracker tracker = transactionTrackers.get(cashSecurityNode);
+        if (tracker == null) {
+            tracker = new SecurityTransactionTracker(cashSecurityNode);
+            transactionTrackers.put(cashSecurityNode, tracker);
+        }
+        
+        tracker.recordCashTransaction(account, transaction, amount);
     }
 }

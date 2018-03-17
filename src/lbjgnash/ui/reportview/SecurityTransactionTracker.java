@@ -17,14 +17,19 @@ package lbjgnash.ui.reportview;
 
 import com.leeboardtools.time.DateUtil;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.TreeSet;
+import jgnash.engine.Account;
+import jgnash.engine.AccountGroup;
 import jgnash.engine.InvestmentTransaction;
 import jgnash.engine.MathConstants;
 import jgnash.engine.SecurityNode;
+import jgnash.engine.Transaction;
+import jgnash.engine.TransactionEntry;
 
 /**
  * This is used to keep track of the shares and market value of a security based
@@ -170,19 +175,24 @@ public class SecurityTransactionTracker {
         }
         
         /**
-         * Retrieves a weighted compound annual growth rate (CAGR) from a given date. The value returned
-         * is the sum of the annual rate of return of each lot multiplied by the current market
-         * price of the lot. To obtain the actual annual rate of return, divide by the market value
-         * at the passed in date.
+         * Retrieves an estimate of the value at the beginning of an annual period of
+         * the security lots that's based upon the compound annual growth rate (CAGR) 
+         * from a given date. For each lot the CAGR is computed, then the value of the
+         * lot one year before the given date is computed based upon this value. The
+         * return value is the sum of these 'year ago' values.
          * @param date  The date of interest.
          * @param minDays   The minimum number of days before a rate of return is computed for a lot,
          * that is, the lot's cost basis date must be at least this many days from date to be included.
-         * @return The sum of the weighted annual rate of returns of the lots.
+         * @return The sum of the year ago values.
          */
-        public final BigDecimal getWeightedAnnualRateOfReturnSum(LocalDate date, int minDays) {
+        public final BigDecimal getYearAgoValueSum(LocalDate date, int minDays) {
             LocalDate cutoffDate = date.minusDays(minDays);
             BigDecimal currentPrice = getMarketPrice(date);
-            BigDecimal weightedRateOfReturnSum = BigDecimal.ZERO;
+            if (currentPrice.compareTo(BigDecimal.ZERO) == 0) {
+                return BigDecimal.ZERO;
+            }
+            
+            BigDecimal yearAgoValueSum = BigDecimal.ZERO;
             
             for (SecurityLot securityLot : securityLots.getSecurityLots()) {
                 if (!securityLot.getCostBasisDate().isBefore(cutoffDate)) {
@@ -200,12 +210,13 @@ public class SecurityTransactionTracker {
                 // (Ending/Begining)^(1/time) - 1
                 double time = DateUtil.getYearsUntil(securityLot.getCostBasisDate(), date);
                 double rateOfReturn = Math.pow(doubleValue / costBasis.doubleValue(), 1./time) - 1.;
-                rateOfReturn *= doubleValue;
                 
-                weightedRateOfReturnSum = weightedRateOfReturnSum.add(BigDecimal.valueOf(rateOfReturn));
+                double doubleYearAgoValue = doubleValue / (1. + rateOfReturn);
+                BigDecimal yearAgoValue = BigDecimal.valueOf(doubleYearAgoValue).setScale(costBasis.scale(), RoundingMode.HALF_UP);
+                yearAgoValueSum = yearAgoValueSum.add(yearAgoValue);
             }
             
-            return weightedRateOfReturnSum;
+            return yearAgoValueSum;
         }
 
         
@@ -238,6 +249,78 @@ public class SecurityTransactionTracker {
     
     public final void clearAll() {
         dateEntries.clear();
+    }
+    
+    
+    public final void recordCashTransaction(Account cashAccount, Transaction transaction, BigDecimal amount) {
+        LocalDate date = transaction.getLocalDate();
+
+        String lotId = SecurityLot.makeLotId();
+        SecurityLotAction action;
+
+        SecurityLots previousLots;
+        List<SecurityLotAction> otherActions;
+
+        DateEntry previousDateEntry = dateEntries.floor(new DateEntry(date));
+        if (previousDateEntry == null) {
+            previousLots = new SecurityLots();
+            otherActions = null;
+        }
+        else {
+            previousLots = previousDateEntry.getSecurityLots();
+            otherActions = (previousDateEntry.getDate().equals(date)) ? previousDateEntry.getSecurityLotActions() : null;
+        }
+        
+
+        if (amount.compareTo(BigDecimal.ZERO) > 0) {
+            // Is it income, or cash inflow?
+            // Cash inflow has cost basis, income does not.
+            boolean isIncome = false;
+            for (TransactionEntry entry : transaction.getTransactionEntries()) {
+                if (entry.getCreditAccount() != cashAccount) {
+                    continue;
+                }
+                
+                Account debitAccount = entry.getDebitAccount();
+                if (debitAccount.getAccountType().getAccountGroup() == AccountGroup.INCOME) {
+                    isIncome = true;
+                    break;
+                }
+            }
+            
+            if (isIncome) {
+                action = new SecurityLotAction.DistributeCash(date, amount);
+            }
+            else {
+                SecurityLot newLot = new SecurityLot(lotId, date, amount, amount, null);
+                action = new SecurityLotAction.AddLot(newLot);
+            }
+        }
+        else {
+            BigDecimal sharesToRemove = amount.negate();
+            BigDecimal currentShares = previousLots.getTotalShares();
+            if (sharesToRemove.compareTo(currentShares) <= 0) {
+                action = new SecurityLotAction.SellFIFOShares(date, amount.negate());
+            }
+            else {
+                // Going negative, probably the result of a sell before a buy, but for now
+                // we'll just go negative shares.
+                BigDecimal negativeShares = currentShares.subtract(sharesToRemove);
+                previousLots = new SecurityLots();
+                SecurityLot newLot = new SecurityLot(lotId, date, negativeShares, negativeShares, null);
+                action = new SecurityLotAction.AddLot(newLot);
+            }
+        }
+
+        SecurityLots newLots = action.applyAction(previousLots);
+        BigDecimal marketPrice = BigDecimal.ONE;
+        
+        DateEntry dateEntry = new DateEntry(date, marketPrice, action, otherActions, newLots);
+        if (otherActions != null) {
+            dateEntries.remove(previousDateEntry);
+        }
+        dateEntries.add(dateEntry);
+        
     }
     
     protected void dumpTransaction(String title, LocalDate date, BigDecimal quantity, BigDecimal cashValue) {
@@ -288,9 +371,11 @@ public class SecurityTransactionTracker {
                 break;
                 
             case SPLITSHARE:
+                action = createScaleSharesAction(transaction, quantity);
                 break;
                 
             case MERGESHARE:
+                action = createScaleSharesAction(transaction, quantity.negate());
                 break;
                 
             default:
@@ -326,6 +411,25 @@ public class SecurityTransactionTracker {
         }
         dateEntries.add(dateEntry);
     }
+    
+    
+    protected SecurityLotAction.ScaleShares createScaleSharesAction(InvestmentTransaction transaction, BigDecimal sharesAdded) {
+        if (sharesAdded.compareTo(BigDecimal.ZERO) == 0) {
+            return null;
+        }
+        
+        LocalDate date = transaction.getLocalDate();
+        DateEntry previousDateEntry = dateEntries.floor(new DateEntry(date));
+        if (previousDateEntry == null) {
+            return null;
+        }
+        
+        SecurityLots previousLots = previousDateEntry.getSecurityLots();
+        BigDecimal oldShares = previousLots.getTotalShares();
+        BigDecimal newShares = oldShares.add(sharesAdded);        
+        return new SecurityLotAction.ScaleShares(date, oldShares, newShares);
+    }
+
     
     protected SecurityLot newLotForTransaction(InvestmentTransaction transaction) {
         String lotId = SecurityLot.makeLotId();

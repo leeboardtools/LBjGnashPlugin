@@ -208,4 +208,78 @@ public class SecurityLotsTest {
         checkSecurityLots(refLotsC, securityLots);
 
     }
+
+    @Test
+    public void testDistributeCash() {
+        System.out.println("distributeCash");
+        
+        SecurityLot.nextLotId = 1;
+        
+        SecurityLot refLotsA[] = {
+            new SecurityLot("A", LocalDate.of(2017,1,2), new BigDecimal(100), new BigDecimal(1000), LocalDate.of(2017,1,2)),
+            new SecurityLot("B", LocalDate.of(2017,1,2), new BigDecimal(200), new BigDecimal(2000), LocalDate.of(2017,1,3)),
+            new SecurityLot("C", LocalDate.of(2017,1,2), new BigDecimal(300), new BigDecimal(3000), LocalDate.of(2017,1,4)),
+            new SecurityLot("D", LocalDate.of(2017,1,2), new BigDecimal(300), new BigDecimal(3000), LocalDate.of(2017,1,5)),
+        };
+        SecurityLots securityLotsA = new SecurityLots(Arrays.asList(refLotsA));
+        checkSecurityLots(refLotsA, securityLotsA);
+
+        SecurityLots securityLots;
+
+        SecurityLot refLotsB[] = {
+            new SecurityLot("4", LocalDate.of(2017,1,2), new BigDecimal(101), new BigDecimal(1000), LocalDate.of(2017,1,2)),
+            new SecurityLot("3", LocalDate.of(2017,1,2), new BigDecimal(202), new BigDecimal(2000), LocalDate.of(2017,1,3)),
+            new SecurityLot("1", LocalDate.of(2017,1,2), new BigDecimal(303), new BigDecimal(3000), LocalDate.of(2017,1,4)),
+            new SecurityLot("2", LocalDate.of(2017,1,2), new BigDecimal(303), new BigDecimal(3000), LocalDate.of(2017,1,5)),
+        };
+        securityLots = securityLotsA.distributeCash(LocalDate.of(2017,1,2), new BigDecimal(9));
+        checkSecurityLots(refLotsB, securityLots);
+
+        SecurityLot refLotsC[] = {
+            new SecurityLot("A", LocalDate.of(2018,1,2), new BigDecimal(394), new BigDecimal(1000), LocalDate.of(2017,1,2)),
+            new SecurityLot("B", LocalDate.of(2018,1,2), new BigDecimal(300), new BigDecimal(2000), LocalDate.of(2017,1,3)),
+            new SecurityLot("C", LocalDate.of(2018,1,2), new BigDecimal(6), new BigDecimal(3000), LocalDate.of(2017,1,4)),
+            new SecurityLot("D", LocalDate.of(2018,1,2), new BigDecimal(200), new BigDecimal(3000), LocalDate.of(2017,1,5)),
+            new SecurityLot("E", LocalDate.of(2018,1,2), new BigDecimal(100), new BigDecimal(2000), LocalDate.of(2017,1,6)),
+        };
+        SecurityLots securityLotsC = new SecurityLots(Arrays.asList(refLotsC));
+        checkSecurityLots(refLotsC, securityLotsC);
+        
+        // 394 -> 0.39
+        // 300 -> 0.30
+        // 6 -> 0.006
+        // 200 -> 0.20
+        // 100 -> 0.10
+        SecurityLot refLotsD[] = {
+            new SecurityLot("5", LocalDate.of(2018,1,2), BigDecimal.valueOf(39439,2), new BigDecimal(1000), LocalDate.of(2017,1,2)),
+            new SecurityLot("6", LocalDate.of(2018,1,2), BigDecimal.valueOf(30030,2), new BigDecimal(2000), LocalDate.of(2017,1,3)),
+            new SecurityLot("9", LocalDate.of(2018,1,2), BigDecimal.valueOf(601,2), new BigDecimal(3000), LocalDate.of(2017,1,4)),
+            new SecurityLot("7", LocalDate.of(2018,1,2), BigDecimal.valueOf(20020,2), new BigDecimal(3000), LocalDate.of(2017,1,5)),
+            new SecurityLot("8", LocalDate.of(2018,1,2), BigDecimal.valueOf(10010,2), new BigDecimal(2000), LocalDate.of(2017,1,6)),
+        };
+        securityLots = securityLotsC.distributeCash(LocalDate.of(2018,1,2), new BigDecimal(1));
+        checkSecurityLots(refLotsD, securityLots);
+
+        
+        SecurityLot refLotsE[] = {
+            new SecurityLot("A", LocalDate.of(2018,1,2), new BigDecimal(396), new BigDecimal(1000), LocalDate.of(2017,1,2)),
+            new SecurityLot("B", LocalDate.of(2018,1,2), new BigDecimal(300), new BigDecimal(2000), LocalDate.of(2017,1,3)),
+            new SecurityLot("C", LocalDate.of(2018,1,2), new BigDecimal(4), new BigDecimal(3000), LocalDate.of(2017,1,4)),
+            new SecurityLot("D", LocalDate.of(2018,1,2), new BigDecimal(200), new BigDecimal(3000), LocalDate.of(2017,1,5)),
+            new SecurityLot("E", LocalDate.of(2018,1,2), new BigDecimal(100), new BigDecimal(2000), LocalDate.of(2017,1,6)),
+        };
+        SecurityLots securityLotsE = new SecurityLots(Arrays.asList(refLotsE));
+        checkSecurityLots(refLotsE, securityLotsE);
+        
+        SecurityLot refLotsF[] = {
+            new SecurityLot("10", LocalDate.of(2018,1,2), BigDecimal.valueOf(39640,2), new BigDecimal(1000), LocalDate.of(2017,1,2)),
+            new SecurityLot("11", LocalDate.of(2018,1,2), BigDecimal.valueOf(30030,2), new BigDecimal(2000), LocalDate.of(2017,1,3)),
+            new SecurityLot("C", LocalDate.of(2018,1,2), BigDecimal.valueOf(4,0), new BigDecimal(3000), LocalDate.of(2017,1,4)),
+            new SecurityLot("12", LocalDate.of(2018,1,2), BigDecimal.valueOf(20020,2), new BigDecimal(3000), LocalDate.of(2017,1,5)),
+            new SecurityLot("13", LocalDate.of(2018,1,2), BigDecimal.valueOf(10010,2), new BigDecimal(2000), LocalDate.of(2017,1,6)),
+        };
+        securityLots = securityLotsE.distributeCash(LocalDate.of(2018,1,2), new BigDecimal(1));
+        checkSecurityLots(refLotsF, securityLots);
+        
+    }
 }

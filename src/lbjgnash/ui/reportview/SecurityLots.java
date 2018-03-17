@@ -16,6 +16,7 @@
 package lbjgnash.ui.reportview;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -24,7 +25,9 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.Map;
 import java.util.SortedSet;
+import java.util.TreeMap;
 import java.util.TreeSet;
 
 /**
@@ -32,6 +35,7 @@ import java.util.TreeSet;
  * @author Albert Santos
  */
 public class SecurityLots {
+    private final int cashScale = 2;
     private final TreeSet<SecurityLot> securityLots;
     private final SortedSet<SecurityLot> readOnlySecurityLots;
     private BigDecimal totalShares;
@@ -169,6 +173,7 @@ public class SecurityLots {
         }
         
         if (shares.compareTo(BigDecimal.ZERO) != 0) {
+            // We've gone negative...
             throw new IllegalArgumentException("More shares were requested than are in the set of lots!");
         }
         
@@ -288,4 +293,94 @@ public class SecurityLots {
         return new SecurityLots(newLots);
     }
     
+    
+    /**
+     * Distributes cash amongst all the lots.
+     * @param date  The date to apply to the new security lots.
+     * @param cash  The cash to distribute.
+     * @return The new security lots.
+     */
+    public SecurityLots distributeCash(LocalDate date, BigDecimal cash) {
+        BigDecimal cashRemaining = cash;
+        if (cash.scale() < cashScale) {
+            cash = cash.setScale(cashScale);
+        }
+
+        List<SecurityLot> newLots = new ArrayList<>();
+        getTotalShares();
+        
+        if (securityLots.isEmpty() || (totalShares.compareTo(BigDecimal.ZERO) == 0)) {
+            // No shares, have to add the shares as a lot.
+            SecurityLot newLot = new SecurityLot(SecurityLot.makeLotId(), date, cash, cash, null);
+            newLots.add(newLot);
+            return new SecurityLots(newLots);
+        }
+        
+        // Since we're cash, we don't have to worry about the market price, we can
+        // work directly with shares.
+
+        // Since we might have a very small amount of cash to allocate, and we can't
+        // allocate anything less than 1 cent, we're going to have to start allocating
+        // to the largest lots until we run out of cash to allocate.
+        Iterator<SecurityLot> iterator = securityLots.iterator();
+        TreeMap<BigDecimal, List<SecurityLot>> securityLotsByShares = new TreeMap<>();
+        while (iterator.hasNext()) {
+            SecurityLot oldLot = iterator.next();
+            BigDecimal shares = oldLot.getShares();
+            List<SecurityLot> sharesList = securityLotsByShares.get(shares);
+            if (sharesList == null) {
+                sharesList = new ArrayList<>();
+                securityLotsByShares.put(shares, sharesList);
+            }
+            
+            sharesList.add(oldLot);            
+        }
+        
+        for (BigDecimal shares : securityLotsByShares.descendingKeySet()) {
+            List<SecurityLot> lotsList = securityLotsByShares.get(shares);
+            BigDecimal toDistribute;
+            if (cashRemaining.compareTo(BigDecimal.ZERO) > 0) {
+                toDistribute = cash.multiply(shares).divide(totalShares, RoundingMode.HALF_UP);
+                toDistribute = toDistribute.setScale(cashScale, RoundingMode.HALF_UP);
+                
+                if ((newLots.size() + 1) == securityLots.size()) {
+                    toDistribute = cashRemaining;
+                }
+                else if (toDistribute.compareTo(BigDecimal.ZERO) == 0) {
+                    toDistribute = cashRemaining;
+                }
+                else if (toDistribute.compareTo(cashRemaining) > 0) {
+                    toDistribute = cashRemaining;
+                }
+            }
+            else {
+                toDistribute = null;
+            }
+            
+            for (SecurityLot lot : lotsList) {
+                if (toDistribute != null) {
+                    String lotId = SecurityLot.makeLotId();
+                    BigDecimal newShares = lot.getShares().add(toDistribute);
+                    SecurityLot newLot = new SecurityLot(lotId, date, newShares, lot.getCostBasis(), lot.getCostBasisDate());
+                    newLots.add(newLot);
+                    
+                    cashRemaining = cashRemaining.subtract(toDistribute);
+                    if (cashRemaining.compareTo(BigDecimal.ZERO) <= 0) {
+                        toDistribute = null;
+                    }
+                    else if ((newLots.size() + 1) == securityLots.size()) {
+                        toDistribute = cashRemaining;
+                    }
+                    else if (toDistribute.compareTo(cashRemaining) > 0) {
+                        toDistribute = cashRemaining;
+                    }
+                }
+                else {
+                    newLots.add(lot);
+                }
+            }
+        }
+        
+        return new SecurityLots(newLots);
+    }
 }

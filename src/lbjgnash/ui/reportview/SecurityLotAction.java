@@ -110,5 +110,20 @@ public interface SecurityLotAction {
             return securityLots.scaleShares(date, sharesIn, sharesOut);
         }
     }
+
+    
+    public static class DistributeCash implements SecurityLotAction {
+        private final LocalDate date;
+        private final BigDecimal cashIn;
         
+        public DistributeCash(LocalDate date, BigDecimal cashIn) {
+            this.date = date;
+            this.cashIn = cashIn;
+        }
+
+        @Override
+        public SecurityLots applyAction(SecurityLots securityLots) {
+            return securityLots.distributeCash(date, cashIn);
+        }
+    }
 }
