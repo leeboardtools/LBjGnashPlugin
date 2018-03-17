@@ -26,6 +26,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
+import java.util.Objects;
 import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -80,6 +81,21 @@ public class SecurityLots {
      */
     public final SortedSet<SecurityLot> getSecurityLots() {
         return readOnlySecurityLots;
+    }
+    
+    /**
+     * Retrieves the security lot with a given lot id.
+     * @param lotId The lot id.
+     * @return The security lot, <code>null</code> if none found.
+     */
+    public final SecurityLot getSecurityLotWithId(String lotId) {
+        for (SecurityLot lot : securityLots) {
+            if (Objects.equals(lotId, lot.getLotId())) {
+                return lot;
+            }
+        }
+        
+        return null;
     }
     
     /**

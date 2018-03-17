@@ -21,8 +21,11 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 import java.util.TreeSet;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import jgnash.engine.Account;
 import jgnash.engine.AccountGroup;
 import jgnash.engine.InvestmentTransaction;
@@ -30,6 +33,7 @@ import jgnash.engine.MathConstants;
 import jgnash.engine.SecurityNode;
 import jgnash.engine.Transaction;
 import jgnash.engine.TransactionEntry;
+import org.hsqldb.lib.StringUtil;
 
 /**
  * This is used to keep track of the shares and market value of a security based
@@ -37,6 +41,8 @@ import jgnash.engine.TransactionEntry;
  * @author Albert Santos
  */
 public class SecurityTransactionTracker {
+    private static final Logger LOG = Logger.getLogger(SecurityTransactionTracker.class.getName());
+    
     private final SecurityNode securityNode;
     private final TreeSet<DateEntry> dateEntries = new TreeSet<>();
 
@@ -432,7 +438,18 @@ public class SecurityTransactionTracker {
 
     
     protected SecurityLot newLotForTransaction(InvestmentTransaction transaction) {
-        String lotId = SecurityLot.makeLotId();
+        String lotId = null;
+        Collection<String> lotNames = lotNamesFromString(transaction.getMemo());
+        if ((lotNames != null) && !lotNames.isEmpty()) {
+            Iterator<String> iterator = lotNames.iterator();
+            if (iterator.hasNext()) {
+                lotId = iterator.next();
+            }
+        }
+        if (StringUtil.isEmpty(lotId)) {
+            lotId = SecurityLot.makeLotId();
+        }
+        
         LocalDate date = transaction.getLocalDate();
         BigDecimal shares = transaction.getQuantity();
         BigDecimal costBasis = getTransactionCashValue(transaction);
@@ -444,17 +461,90 @@ public class SecurityTransactionTracker {
         BigDecimal cashValue = transaction.getNetCashValue().setScale(securityNode.getScale(), MathConstants.roundingMode);
         return cashValue;
     }
-    
-    //
-    // TODO: Need a lot coding scheme for the InvestmentTransaction memo.
-    // For add/buy shares, could be just the date plus the occurance index for multiple occurances in a single date.
-    // For remove/sell shares, need to identify the lots:
-    // LOT xxx:nn
-    // xxx is the lot id,
-    // nn is the number of shares.
-    // Multiple lines by space separating the entries.
+
     
     protected Collection<SecurityLots.LotShares> getLotSharesFromTransaction(InvestmentTransaction transaction) {
-        return null;
+        String memo = transaction.getMemo();
+        Collection<String> lotNames = lotNamesFromString(memo);
+        if ((lotNames == null) || (lotNames.isEmpty())) {
+            return null;
+        }
+        
+        DateEntry dateEntry = getDateEntry(transaction.getLocalDate());
+        if (dateEntry == null) {
+            return null;
+        }
+        SecurityLots securityLots = dateEntry.getSecurityLots();
+        
+        BigDecimal totalShares = BigDecimal.ZERO;
+        Collection<SecurityLots.LotShares> lotShares = new ArrayList<>();
+        for (String lotName : lotNames) {
+            SecurityLot lot = securityLots.getSecurityLotWithId(lotName);
+            if (lot == null) {
+                // All or nothing...
+                LOG.warning("Lot not found, ignoring all lots:\t" + transaction.getLocalDate() + "\t" + lotName);
+                return null;
+            }
+            
+            SecurityLots.LotShares lotSharesToAdd = new SecurityLots.LotShares(lot, lot.getShares());
+            lotShares.add(lotSharesToAdd);
+            totalShares = totalShares.add(lot.getShares());
+        }
+        
+        BigDecimal transactionShares = transaction.getQuantity();
+        if (totalShares.compareTo(transactionShares) != 0) {
+            LOG.warning("Lot shares do not match transaction shares, ignoring all lots:\t" + transaction.getLocalDate()
+                + "\tTransaction Shares:\t" + transactionShares
+                + "\tLot Shares:\t" + totalShares);
+            return null;
+        }
+        
+        return lotShares;
+    }
+    
+    protected static final String LOT_TAG = "LOT:";
+    protected static final String LOT_SEPARATOR_TAG = ";";
+    
+    protected Collection<String> lotNamesFromString(String text) {
+        if (StringUtil.isEmpty(text)) {
+            return null;
+        }
+        text = text.trim();
+        
+        int startIndex = text.indexOf(LOT_TAG);
+        if (startIndex < 0) {
+            return null;
+        }
+        
+        Collection<String> lotNames = new ArrayList<>();
+        
+        while (true) {
+            startIndex += LOT_TAG.length();
+            int endIndex = text.indexOf(LOT_TAG, startIndex);
+
+            String lotName;
+            if (endIndex < 0) {
+                lotName = text.substring(startIndex);
+                lotName = cleanupLotName(lotName);
+                lotNames.add(lotName);
+                break;
+            }
+            
+            lotName = text.substring(startIndex, endIndex);
+            lotName = cleanupLotName(lotName);
+            lotNames.add(lotName);
+            
+            startIndex = endIndex;
+        }
+
+        return lotNames;
+    }
+    
+    protected String cleanupLotName(String lotName) {
+        lotName = lotName.trim();
+        if (lotName.endsWith(LOT_SEPARATOR_TAG)) {
+            lotName = lotName.substring(0, lotName.length() - LOT_SEPARATOR_TAG.length()).trim();
+        }
+        return lotName;
     }
 }
