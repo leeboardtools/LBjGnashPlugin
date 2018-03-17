@@ -77,22 +77,22 @@ public interface DateOffset {
     /**
      * Date offset that returns the last day of the year before the reference date's year.
      */
-    public static final DateOffset.Basic END_OF_LAST_YEAR = new Basic(Interval.YEAR, 1, IntervalRelation.LAST_DAY);
+    public static final DateOffset.Basic END_OF_LAST_YEAR = new Basic(Interval.YEAR, -1, IntervalRelation.LAST_DAY);
 
     /**
      * Date offset that returns the first day of the year before the reference date's year.
      */
-    public static final DateOffset.Basic START_OF_LAST_YEAR = new Basic(Interval.YEAR, -1, IntervalRelation.FIRST_DAY);
+    public static final DateOffset.Basic START_OF_LAST_YEAR = new Basic(Interval.YEAR, 1, IntervalRelation.FIRST_DAY);
 
     /**
      * Date offset that returns the last day of the month before the reference date's month.
      */
-    public static final DateOffset.Basic END_OF_LAST_MONTH = new Basic(Interval.MONTH, 1, IntervalRelation.LAST_DAY);
+    public static final DateOffset.Basic END_OF_LAST_MONTH = new Basic(Interval.MONTH, -1, IntervalRelation.LAST_DAY);
 
     /**
      * Date offset that returns the first day of the month before the reference date's month.
      */
-    public static final DateOffset.Basic START_OF_LAST_MONTH = new Basic(Interval.MONTH, -1, IntervalRelation.FIRST_DAY);
+    public static final DateOffset.Basic START_OF_LAST_MONTH = new Basic(Interval.MONTH, 1, IntervalRelation.FIRST_DAY);
     
     
     /**

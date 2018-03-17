@@ -67,4 +67,9 @@ public class ReportManagerView {
         }
         
     }
+    
+    
+    public static String promptNewReportName(Stage stage, String currentName) {
+        return ReportManagerViewController.promptNewReportName(stage, currentName);
+    }
 }

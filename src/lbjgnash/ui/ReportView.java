@@ -43,6 +43,8 @@ import jgnash.engine.Engine;
 public class ReportView {
     private static List<ReportViewEntry> openReportViewEntries = new ArrayList<>();
     
+    protected ReportViewEntry reportViewEntry;
+    
     protected String reportLabel;
     protected Stage stage;
     protected ReportDefinition definition;
@@ -153,11 +155,27 @@ public class ReportView {
             onConfigureReport();
         });
 
-        MenuItem saveItem = new MenuItem(ResourceSource.getString("ReportView.MenuItem.Save"));
-        menuButton.getItems().add(saveItem);        
-        saveItem.setOnAction((event) -> {
-            onSaveReport();
+        MenuItem saveSetupItem = new MenuItem(ResourceSource.getString("ReportView.MenuItem.SaveSetup"));
+        menuButton.getItems().add(saveSetupItem);        
+        saveSetupItem.setOnAction((event) -> {
+            onSaveReportSetup();
         });
+
+        MenuItem exportItem = new MenuItem(ResourceSource.getString("ReportView.MenuItem.Export"));
+        menuButton.getItems().add(exportItem);        
+        exportItem.setOnAction((event) -> {
+            onExportReport();
+        });
+        exportItem.setDisable(true);
+
+        MenuItem printItem = new MenuItem(ResourceSource.getString("ReportView.MenuItem.Print"));
+        menuButton.getItems().add(printItem);        
+        printItem.setOnAction((event) -> {
+            onPrintReport();
+        });
+        printItem.setDisable(true);
+        
+        
     }
     
     protected void setupReportArea() {
@@ -206,8 +224,27 @@ public class ReportView {
         }
     }
     
-    protected void onSaveReport() {
+    protected void onSaveReportSetup() {
+        String reportName = ReportManagerView.promptNewReportName(stage, reportLabel);
+        if (StringUtil.isNonEmpty(reportName)) {
+            ReportDefinition newDefinition = ReportManager.createReportDefinition(reportName, definition.getStyle());
+            newDefinition.copyFrom(definition);
+            ReportManager.saveReport(reportName);
+            
+            if (reportViewEntry != null) {
+                reportViewEntry.reportLabel = reportName;
+            }
+            
+            reportLabel = reportName;
+            stage.setTitle(reportLabel);
+        }
+    }
+    
+    protected void onExportReport() {
         
+    }
+    
+    protected void onPrintReport() {
     }
     
     
@@ -215,7 +252,7 @@ public class ReportView {
     // This is all report view manage stuff below...
     //
     public static class ReportViewEntry {
-        private final String reportLabel;
+        private String reportLabel;
         private final ReportView reportView;
         
         public ReportViewEntry(String reportLabel, ReportView reportView) {
@@ -248,6 +285,7 @@ public class ReportView {
         for (ReportViewEntry entry : openReportViewEntries) {
             if (entry.getReportView() == reportView) {
                 openReportViewEntries.remove(entry);
+                entry.reportView.reportViewEntry = null;
                 return;
             }
         }
@@ -297,6 +335,8 @@ public class ReportView {
         reportView.setupReportView(label, definition, engine, primaryStage);
         
         ReportViewEntry entry = new ReportViewEntry(label, reportView);
+        reportView.reportViewEntry = entry;
+        
         openReportViewEntries.add(entry);
         return entry;
     }

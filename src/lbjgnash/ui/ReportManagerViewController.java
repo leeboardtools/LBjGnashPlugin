@@ -18,6 +18,7 @@ package lbjgnash.ui;
 import com.leeboardtools.dialog.PromptDialog;
 import com.leeboardtools.util.FileUtil;
 import com.leeboardtools.util.ResourceSource;
+import com.leeboardtools.util.StringUtil;
 import java.net.URL;
 import java.util.ResourceBundle;
 import javafx.event.ActionEvent;
@@ -94,9 +95,9 @@ public class ReportManagerViewController implements Initializable {
             }
         }
     }
-
-    @FXML
-    private void onNew(ActionEvent event) {
+    
+    
+    public static String promptNewReportName(Stage stage, String currentName) {
         PromptDialog dialog = new PromptDialog();
         dialog.setTitle(ResourceSource.getString("NewReport.Title"));
         String label = ResourceSource.getString("NewReport.Label");
@@ -106,7 +107,7 @@ public class ReportManagerViewController implements Initializable {
         String okText = ResourceSource.getString("LBDialog.OK");
         String cancelText = ResourceSource.getString("LBDialog.Cancel");
         
-        dialog.addTextInput(label, id, null, promptText, true);
+        dialog.addTextInput(label, id, currentName, promptText, true);
         dialog.addButton(okText, PromptDialog.BTN_OK);
         dialog.addButton(cancelText, PromptDialog.BTN_CANCEL);
         dialog.setDefaultButtonId(PromptDialog.BTN_OK);
@@ -122,10 +123,12 @@ public class ReportManagerViewController implements Initializable {
                 return false;
             }
             
-            if (this.reportsListView.getItems().contains(reportName)) {
-                String message = ResourceSource.getString("NewReport.DuplicateReportConfirm", reportName);
-                String title = ResourceSource.getString("NewReport.DuplicateReportTitle");
-                return PromptDialog.showOKCancelDialog(stage, message, title);
+            if ((currentName == null) || !currentName.equals(reportName)) {
+                if (ReportManager.getAvailableReportNames().contains(reportName)) {
+                    String message = ResourceSource.getString("NewReport.DuplicateReportConfirm", reportName);
+                    String title = ResourceSource.getString("NewReport.DuplicateReportTitle");
+                    return PromptDialog.showOKCancelDialog(stage, message, title);
+                }
             }
             
             return true;
@@ -133,7 +136,16 @@ public class ReportManagerViewController implements Initializable {
         
         if (dialog.showSimpleDialog(stage) == PromptDialog.BTN_OK) {
             String newReportName = dialog.getTextInputText(id).trim();
+            return newReportName;
+        }
+        
+        return null;
+    }
 
+    @FXML
+    private void onNew(ActionEvent event) {
+        String newReportName = promptNewReportName(stage, null);
+        if (StringUtil.isNonEmpty(newReportName)) {
             ReportDefinition oldReportDefinition = null;
             if (this.reportsListView.getItems().contains(newReportName)) {
                 oldReportDefinition = ReportManager.getReportDefinition(newReportName);

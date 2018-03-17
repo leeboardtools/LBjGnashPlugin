@@ -86,6 +86,11 @@ public class ReportManager {
     
     private static Path reportsPath;
     
+    private static Path useReportsPath() {
+        String homeFolder = System.getProperty("user.home");
+        reportsPath = FileSystems.getDefault().getPath(homeFolder, "jGnash");
+        return reportsPath;
+    }
     
     public static String pathToReportName(Path path) {
         Objects.requireNonNull(path);
@@ -95,13 +100,14 @@ public class ReportManager {
     
     public static Path reportNameToPath(String reportName) {
         Objects.requireNonNull(reportName);
+
+        useReportsPath();
         return new File(reportsPath.toFile(), reportName + DOT_FILE_EXTENSION).toPath();
     }
     
     public static void updateReportEntries() {
         try {
-            String homeFolder = System.getProperty("user.home");
-            reportsPath = FileSystems.getDefault().getPath(homeFolder, "jGnash");
+            useReportsPath();
             
             TreeMap<String, ReportEntry> availableReportEntries = new TreeMap<>();
             
