@@ -153,6 +153,19 @@ public class ReportManagerViewController implements Initializable {
             
             ReportDefinition reportDefinition = ReportManager.createReportDefinition(newReportName, ReportDefinition.Style.NET_WORTH);
             if (reportDefinition != null) {
+                if (oldReportDefinition != null) {
+                    reportDefinition.copyFrom(oldReportDefinition);
+                }
+                else {
+                    String selectedReportName = reportsListView.getSelectionModel().getSelectedItem();
+                    if (selectedReportName != null) {
+                        ReportDefinition selectedReportDefinition = ReportManager.getReportDefinition(selectedReportName);
+                        if (selectedReportDefinition != null) {
+                            reportDefinition.copyFrom(selectedReportDefinition);
+                        }
+                    }
+                }
+                
                 if (!ReportSetupView.showAndWait(newReportName, reportDefinition, engine, stage)) {
                     // Canceled, delete the report if it wasn't already existing..
                     if (oldReportDefinition == null) {

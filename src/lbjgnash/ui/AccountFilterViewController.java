@@ -16,10 +16,13 @@
 package lbjgnash.ui;
 
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.ResourceBundle;
 import java.util.Set;
+import java.util.SortedMap;
 import java.util.SortedSet;
+import java.util.TreeMap;
 import java.util.TreeSet;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ReadOnlyStringProperty;
@@ -76,6 +79,10 @@ public class AccountFilterViewController implements Initializable {
     @FXML
     private CheckBox excludeVisibleAccounts;
     
+    private List<CheckEntry<String>> masterIncludeCheckItems;
+    private List<CheckEntry<String>> masterExcludeCheckItems;
+    
+    
     private Engine engine;
     private ChangeListener<Boolean> checkChangeListener = (property, oldValue, newValue) -> {
         updateAccountFilter();
@@ -96,14 +103,23 @@ public class AccountFilterViewController implements Initializable {
     private Tab excludeAccountGroupsTab;
     @FXML
     private Tab excludeAccountNamesTab;
+    @FXML
+    private CheckBox displayHiddenAccountsInclude;
+    @FXML
+    private CheckBox displayHiddenAccountsExclude;
     
     class CheckEntry<T> {
         final T item;
+        final Account account;
         
-        CheckEntry(T item) {
+        CheckEntry(T item, Account account) {
             this.item = item;
             this.name.set(item.toString());
             this.selected.addListener(checkChangeListener);
+            this.account = account;
+        }
+        CheckEntry(T item) {
+            this(item, null);
         }
         
         private final ReadOnlyStringWrapper name = new ReadOnlyStringWrapper();
@@ -186,28 +202,32 @@ public class AccountFilterViewController implements Initializable {
             if (this.engine != engine) {
                 this.engine = engine;
 
-                ObservableList<CheckEntry<String>> includeAccountNameItems = FXCollections.observableArrayList();
-                ObservableList<CheckEntry<String>> excludeAccountNameItems = FXCollections.observableArrayList();
+                this.masterIncludeCheckItems = new ArrayList<>();
+                this.masterExcludeCheckItems = new ArrayList<>();
+                
                 if (engine != null) {
                     List<Account> accounts = engine.getAccountList();
-                    SortedSet<String> accountNames = new TreeSet<>();
+                    SortedMap<String, Account> accountNames = new TreeMap<>();
 
                     accounts.forEach((account) -> {
                         if (!account.getAccountType().getAccountGroup().equals(AccountGroup.ROOT)) {
-                            accountNames.add(account.getPathName());
+                            accountNames.put(account.getPathName(), account);
                         }
                     });
-                    accountNames.forEach((name) -> {
-                        includeAccountNameItems.add(new CheckEntry<>(name));
-                        excludeAccountNameItems.add(new CheckEntry<>(name));
+                    accountNames.forEach((name, account) -> {
+                        CheckEntry<String> includeCheckEntry = new CheckEntry<>(name, account);
+                        this.masterIncludeCheckItems.add(includeCheckEntry);
+                        
+                        CheckEntry<String> excludeCheckEntry = new CheckEntry<>(name, account);
+                        this.masterExcludeCheckItems.add(excludeCheckEntry);
                     });
                 }
 
                 includeAccountNames.setCellFactory(CheckBoxListCell.forListView(CheckEntry<String>::selectedProperty));
-                includeAccountNames.setItems(includeAccountNameItems);
-
                 excludeAccountNames.setCellFactory(CheckBoxListCell.forListView(CheckEntry<String>::selectedProperty));
-                excludeAccountNames.setItems(excludeAccountNameItems);
+
+                updateAccountsList(this.includeAccountNames, this.masterIncludeCheckItems);
+                updateAccountsList(this.excludeAccountNames, this.masterExcludeCheckItems);
             }
             
             if (this.accountFilter != accountFilter) {
@@ -216,7 +236,7 @@ public class AccountFilterViewController implements Initializable {
             }
             
         } finally {
-            decremenetDisableUpdateAccountFilter();
+            decrementDisableUpdateAccountFilter();
         }
     }
 
@@ -240,7 +260,7 @@ public class AccountFilterViewController implements Initializable {
                 checkAllItemsTheSame(includeAccountNames, true);
             }
         } finally {
-            decremenetDisableUpdateAccountFilter();
+            decrementDisableUpdateAccountFilter();
         }
     }
     
@@ -258,7 +278,7 @@ public class AccountFilterViewController implements Initializable {
                 checkAllItemsTheSame(includeAccountNames, false);
             }
         } finally {
-            decremenetDisableUpdateAccountFilter();
+            decrementDisableUpdateAccountFilter();
         }
     }
 
@@ -267,7 +287,7 @@ public class AccountFilterViewController implements Initializable {
         incrementDisableUpdateAccountFilter();
         try {
         } finally {
-            decremenetDisableUpdateAccountFilter();
+            decrementDisableUpdateAccountFilter();
         }
     }
 
@@ -285,7 +305,7 @@ public class AccountFilterViewController implements Initializable {
                 checkAllItemsTheSame(excludeAccountNames, true);
             }
         } finally {
-            decremenetDisableUpdateAccountFilter();
+            decrementDisableUpdateAccountFilter();
         }
     }
 
@@ -303,7 +323,7 @@ public class AccountFilterViewController implements Initializable {
                 checkAllItemsTheSame(excludeAccountNames, false);
             }
         } finally {
-            decremenetDisableUpdateAccountFilter();
+            decrementDisableUpdateAccountFilter();
         }
     }
 
@@ -313,7 +333,7 @@ public class AccountFilterViewController implements Initializable {
         try {
             
         } finally {
-            decremenetDisableUpdateAccountFilter();
+            decrementDisableUpdateAccountFilter();
         }
     }
     
@@ -321,7 +341,7 @@ public class AccountFilterViewController implements Initializable {
     void incrementDisableUpdateAccountFilter() {
         ++updateAccountFilterDisableCount;
     }
-    void decremenetDisableUpdateAccountFilter() {
+    void decrementDisableUpdateAccountFilter() {
         --updateAccountFilterDisableCount;
         if (updateAccountFilterDisableCount == 0) {
             updateAccountFilter();
@@ -416,5 +436,39 @@ public class AccountFilterViewController implements Initializable {
             // so updateAccountFilter() doesn't get called if it reaches 0.
             --updateAccountFilterDisableCount;
         }
+    }
+
+    @FXML
+    private void onDisplayHiddenAccountsInclude(ActionEvent event) {
+        if (displayHiddenAccountsInclude.isSelected() != displayHiddenAccountsExclude.isSelected()) {
+            displayHiddenAccountsExclude.setSelected(displayHiddenAccountsInclude.isSelected());
+
+            updateAccountsList(this.includeAccountNames, this.masterIncludeCheckItems);
+            updateAccountsList(this.excludeAccountNames, this.masterExcludeCheckItems);
+        }
+    }
+
+    @FXML
+    private void onDisplayHiddenAccountsExclude(ActionEvent event) {
+        if (displayHiddenAccountsInclude.isSelected() != displayHiddenAccountsExclude.isSelected()) {
+            displayHiddenAccountsInclude.setSelected(displayHiddenAccountsExclude.isSelected());
+
+            updateAccountsList(this.includeAccountNames, this.masterIncludeCheckItems);
+            updateAccountsList(this.excludeAccountNames, this.masterExcludeCheckItems);
+        }
+    }
+    
+    private void updateAccountsList(ListView<CheckEntry<String>> listView, List<CheckEntry<String>> items) {
+        boolean includeHidden = displayHiddenAccountsInclude.isSelected();
+        
+        ObservableList<CheckEntry<String>> accountNameItems = FXCollections.observableArrayList();
+        items.forEach((item) -> {
+            Account account = item.account;
+            if ((account != null) && (account.isVisible() || includeHidden)) {
+                accountNameItems.add(item);
+            }
+        });
+        
+        listView.setItems(accountNameItems);
     }
 }
