@@ -15,8 +15,13 @@
  */
 package lbjgnash.ui.reportview;
 
+import com.leeboardtools.dialog.PromptDialog;
+import com.leeboardtools.util.CSVUtil;
 import com.leeboardtools.util.ResourceSource;
 import com.leeboardtools.util.StringUtil;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -28,6 +33,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javafx.scene.control.Control;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeTableColumn;
@@ -166,6 +173,7 @@ public class ReportDataView {
         
         updateTreeTableView(updatedReportOutput);
     }
+    
     
     
     protected void updateTreeTableView(ReportOutput reportOutput) {
@@ -437,5 +445,38 @@ public class ReportDataView {
         reportOutput.columnGenerators.forEach((generator) -> {
             generator.updateCellValues(reportOutput);
         });
+    }
+    
+    
+    void handleExportFailure(String contextId, File file, IOException ex) {
+        String title = ResourceSource.getString("ReportView.Export.ErrorTitle");
+        String message = ResourceSource.getString(contextId, file.getName(), ex.getLocalizedMessage());
+        PromptDialog.showOKDialog(message, title);
+    }
+    
+    public boolean exportCSVFile(File file) {
+        FileWriter writer;
+        try {
+            writer = new FileWriter(file);
+        } catch (IOException ex) {
+            Logger.getLogger(ReportDataView.class.getName()).log(Level.SEVERE, null, ex);
+            handleExportFailure("ReportView.ExportCSV.CreateError", file, ex);
+            return false;
+        }
+        
+        try {
+            CSVUtil.treeTableViewToCSV(treeTableView, writer);
+        } catch (IOException ex) {
+            Logger.getLogger(ReportDataView.class.getName()).log(Level.SEVERE, null, ex);
+            handleExportFailure("ReportView.ExportCSV.WriteError", file, ex);
+        } finally {
+            try {
+                writer.close();
+            } catch (IOException ex) {
+                Logger.getLogger(ReportDataView.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+        
+        return true;
     }
 }

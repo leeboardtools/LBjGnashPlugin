@@ -15,9 +15,13 @@
  */
 package lbjgnash.ui;
 
+import com.leeboardtools.util.CSVUtil;
 import com.leeboardtools.util.ResourceSource;
 import lbjgnash.ui.reportview.ReportDataView;
 import com.leeboardtools.util.StringUtil;
+import java.io.File;
+import java.nio.file.FileSystems;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -32,6 +36,8 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
+import javafx.stage.FileChooser;
+import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.stage.Stage;
 import jgnash.engine.Engine;
 
@@ -166,7 +172,6 @@ public class ReportView {
         exportItem.setOnAction((event) -> {
             onExportReport();
         });
-        exportItem.setDisable(true);
 
         MenuItem printItem = new MenuItem(ResourceSource.getString("ReportView.MenuItem.Print"));
         menuButton.getItems().add(printItem);        
@@ -240,8 +245,29 @@ public class ReportView {
         }
     }
     
+    
+    protected static File exportInitialDirectory = null;
+    
     protected void onExportReport() {
+        if (exportInitialDirectory == null) {
+            String homeFolder = System.getProperty("user.home");
+            Path exportDirectory = FileSystems.getDefault().getPath(homeFolder, "jGnash");
+            exportInitialDirectory = exportDirectory.toFile();
+        }
+
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle(ResourceSource.getString("ReportView.ExportFileChooser.Title"));
+        fileChooser.setInitialDirectory(exportInitialDirectory);
+        fileChooser.setInitialFileName(reportLabel + CSVUtil.CSV_EXTENSION);
         
+        ExtensionFilter csvFilter = new ExtensionFilter(ResourceSource.getString("ReportView.ExportFileChooser.CSVFiles"), CSVUtil.CSV_WILDCARD_EXTENSION);
+        fileChooser.getExtensionFilters().add(csvFilter);
+        
+        File selectedFile = fileChooser.showSaveDialog(stage);
+        if (selectedFile != null) {
+            exportInitialDirectory = selectedFile.getParentFile();
+            this.reportDataView.exportCSVFile(selectedFile);
+        }
     }
     
     protected void onPrintReport() {

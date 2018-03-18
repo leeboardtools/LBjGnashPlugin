@@ -50,13 +50,14 @@ public class LBJGnashPlugin implements FxPlugin {
             updateMenu();
         });
         
+        /*
         MenuItem summaryMenuItem = new MenuItem(ResourceSource.getString("SummaryMenuItem.Title"));
         summaryMenuItem.setOnAction((event) -> { 
             onSummary();
         });
         engineMenuItems.add(summaryMenuItem);
         lbMenu.getItems().add(summaryMenuItem);
-        
+        */
         
         Menu reportMenu = new Menu(ResourceSource.getString("ReportMenuItem.Title"));
         
@@ -78,11 +79,13 @@ public class LBJGnashPlugin implements FxPlugin {
         });
         reportMenu.getItems().add(portfolioMenuItem);
         
+/*
         MenuItem customMenuItem = new MenuItem(ResourceSource.getString("ReportMenuItem.Custom"));
         customMenuItem.setOnAction((event) -> {
             onShowReportStyle(ReportDefinition.Style.CUSTOM);
         });
         reportMenu.getItems().add(customMenuItem);
+*/
 
         reportMenu.getItems().add(new SeparatorMenuItem());
         

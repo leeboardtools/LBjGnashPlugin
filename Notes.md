@@ -1,7 +1,5 @@
 # TODO
 
-- Add export of report.
-
 - Add Copy to ReportManagerView.
 
 - Add ability to filter on Account notes (want to be able to add say 'real-estate' as a note,
