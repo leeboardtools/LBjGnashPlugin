@@ -17,6 +17,7 @@ package com.leeboardtools.time.ui;
 
 import com.leeboardtools.dialog.Validation;
 import com.leeboardtools.time.DateOffset;
+import com.leeboardtools.util.ResourceSource;
 import java.net.URL;
 import java.util.ResourceBundle;
 import javafx.fxml.FXML;
@@ -61,15 +62,15 @@ public class RangeChooserController implements Initializable {
     }
     
     public boolean validate() {
-        if (!Validation.validateEditCount(countEdit, "LBTimeUI.RangeChooser.InvalidCount", this.stage)) {
+        if (!Validation.validateEditCount(countEdit, ResourceSource.getString("LBTimeUI.RangeChooser.InvalidCount"), this.stage)) {
             return false;
         }
-        int intervalOffset = Integer.parseInt(countEdit.getText());
+/*        int intervalOffset = Integer.parseInt(countEdit.getText());
         if (intervalOffset <= 0) {
-            Validation.reportError("LBTimeUI.RangeChooser.InvalidCount", this.stage);
+            Validation.reportError(ResourceSource.getString("LBTimeUI.RangeChooser.InvalidCount"), this.stage);
             return false;
         }
-        
+*/        
         return true;
     }
     

@@ -288,7 +288,7 @@ public class ReportDefinition extends CompositeObservable {
         definition.setStyle(Style.INCOME_EXPENSE);
         
         definition.setDateGenerator(new PeriodicDateGenerator(DateOffset.SAME_DAY, DateOffset.END_OF_LAST_YEAR, 0));
-        definition.setRangeDateOffset(new DateOffset.Basic(DateOffset.Interval.YEAR, 1, DateOffset.IntervalRelation.FIRST_DAY));
+        definition.setRangeDateOffset(new DateOffset.Basic(DateOffset.Interval.YEAR, -1, DateOffset.IntervalRelation.CURRENT_DAY));
 
         definition.getAccountFilter().getAccountGroupsToInclude().add(AccountGroup.INCOME);
         definition.getAccountFilter().getAccountGroupsToInclude().add(AccountGroup.EXPENSE);

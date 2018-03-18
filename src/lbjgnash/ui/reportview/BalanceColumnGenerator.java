@@ -249,7 +249,12 @@ abstract class BalanceColumnGenerator extends ColumnGenerator {
 
     
     protected BigDecimal getInternalAccountBalance(RowEntry rowEntry, ColumnEntry columnEntry, AccountEntry accountEntry, DateEntry dateEntry, ReportDataView.ReportOutput reportOutput) {
-        return accountEntry.account.getBalance(dateEntry.endDate);
+        if (dateEntry.endDate.equals(dateEntry.startDate)) {
+            return accountEntry.account.getBalance(dateEntry.endDate);
+        }
+        else {
+            return accountEntry.account.getBalance(dateEntry.startDate, dateEntry.endDate);
+        }
     }
 
     

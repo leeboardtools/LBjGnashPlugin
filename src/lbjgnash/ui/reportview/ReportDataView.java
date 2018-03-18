@@ -91,6 +91,18 @@ public class ReportDataView {
         }
 
         public String toMonetaryValueString(BigDecimal value, Account account) {
+            if (definition.getStyle() == ReportDefinition.Style.INCOME_EXPENSE) {
+                if (account == null) {
+                    // Presume this is a sub-total...
+                    value = value.negate();
+                }
+                else {
+                    AccountGroup accountGroup = account.getAccountType().getAccountGroup();
+                    if ((accountGroup == AccountGroup.INCOME) || (accountGroup == AccountGroup.EXPENSE)) {
+                        value = value.negate();
+                    }
+                }
+            }
             return value.setScale(2, MathConstants.roundingMode).toPlainString();
         }
 
@@ -344,6 +356,9 @@ public class ReportDataView {
             LocalDate startDate = endDate;
             if (this.definition.getRangeDateOffset() != null) {
                 startDate = this.definition.getRangeDateOffset().getOffsetDate(endDate);
+                if (startDate.isBefore(endDate)) {
+                    startDate = startDate.plusDays(1);
+                }
             }
             
             DateEntry dateEntry = new DateEntry(startDate, endDate, reportOutput.dateEntries.size());
