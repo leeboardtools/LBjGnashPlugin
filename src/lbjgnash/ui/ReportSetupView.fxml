@@ -118,22 +118,22 @@
                                     </VBox>
                                     <VBox alignment="CENTER">
                                        <children>
-                                          <Button fx:id="useColumnButton" mnemonicParsing="false" onAction="#onUseColumn" prefWidth="70.0" text="Use">
+                                          <Button fx:id="useColumnButton" mnemonicParsing="false" onAction="#onUseColumn" prefWidth="80.0" text="Use">
                                              <VBox.margin>
                                                 <Insets bottom="5.0" top="5.0" />
                                              </VBox.margin>
                                           </Button>
-                                          <Button fx:id="dontUseColumnButton" mnemonicParsing="false" onAction="#onDontUseColumn" prefWidth="70.0" text="Don't">
+                                          <Button fx:id="dontUseColumnButton" mnemonicParsing="false" onAction="#onDontUseColumn" prefWidth="80.0" text="Remove">
                                              <VBox.margin>
                                                 <Insets bottom="5.0" top="5.0" />
                                              </VBox.margin>
                                           </Button>
-                                          <Button fx:id="upColumnButton" mnemonicParsing="false" onAction="#onUpColumn" prefWidth="70.0" text="Up">
+                                          <Button fx:id="upColumnButton" mnemonicParsing="false" onAction="#onUpColumn" prefWidth="80.0" text="Up">
                                              <VBox.margin>
                                                 <Insets bottom="5.0" top="5.0" />
                                              </VBox.margin>
                                           </Button>
-                                          <Button fx:id="downColumnButton" mnemonicParsing="false" onAction="#onDownColumn" prefWidth="70.0" text="Down" VBox.vgrow="ALWAYS">
+                                          <Button fx:id="downColumnButton" mnemonicParsing="false" onAction="#onDownColumn" prefWidth="80.0" text="Down" VBox.vgrow="ALWAYS">
                                              <VBox.margin>
                                                 <Insets bottom="5.0" top="5.0" />
                                              </VBox.margin>
