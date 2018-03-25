@@ -93,7 +93,7 @@ public class ReportView {
         this.definition = definition;
         this.engine = engine;
         
-        this.stage.initOwner(primaryStage);
+        //this.stage.initOwner(primaryStage);
         this.stage.setTitle(label);
         
         this.mainVBox = new VBox();

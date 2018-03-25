@@ -79,6 +79,12 @@ public class LBJGnashPlugin implements FxPlugin {
         });
         reportMenu.getItems().add(portfolioMenuItem);
         
+        MenuItem securitiesMenuItem = new MenuItem(ResourceSource.getString("ReportMenuItem.Securities"));
+        securitiesMenuItem.setOnAction((event) -> {
+            onShowReportStyle(ReportDefinition.Style.SECURITIES);
+        });
+        reportMenu.getItems().add(securitiesMenuItem);
+        
 /*
         MenuItem customMenuItem = new MenuItem(ResourceSource.getString("ReportMenuItem.Custom"));
         customMenuItem.setOnAction((event) -> {

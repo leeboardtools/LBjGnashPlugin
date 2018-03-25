@@ -31,7 +31,9 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.SortedMap;
 import java.util.SortedSet;
+import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -77,6 +79,9 @@ public class ReportDataView {
      * This represents the full output of one report.
      */
     protected class ReportOutput {
+        // Primarily for use by the securities style report.
+        final SortedMap<String, RowEntry> namedRowEntries = new TreeMap<>();
+        
         final List<AccountEntry> accountEntries = new ArrayList<>();
         final List<DateEntry> dateEntries = new ArrayList<>();
         final List<ColumnGenerator> columnGenerators = new ArrayList<>();
@@ -85,6 +90,10 @@ public class ReportDataView {
         final List<ColumnEntry> columnEntries = new ArrayList<>();
 
         RowEntry grandTotalRowEntry;
+        
+        public ReportDefinition getDefinition() {
+            return definition;
+        }
         
         public BigDecimal toMonetaryValue(BigDecimal value, Account account) {
             return value.setScale(2, MathConstants.roundingMode);
@@ -225,6 +234,11 @@ public class ReportDataView {
         // Add the rows...
         reportOutput.accountEntries.forEach((accountEntry) -> {
             addRowsForAccountEntry(root, accountEntry);
+        });
+        
+        reportOutput.namedRowEntries.forEach((name, rowEntry) -> {
+            TreeItem<RowEntry> treeItem = new TreeItem<>(rowEntry);
+            root.getChildren().add(treeItem);
         });
         
         if (reportOutput.grandTotalRowEntry != null) {

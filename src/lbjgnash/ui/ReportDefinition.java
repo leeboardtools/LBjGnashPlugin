@@ -166,6 +166,7 @@ public class ReportDefinition extends CompositeObservable {
         NET_WORTH("ReportDefinition.Style.NetWorth", false),
         INCOME_EXPENSE("ReportDefinition.Style.IncomeExpense", true),
         PORTFOLIO("ReportDefinition.Style.Portfolio", false),
+        SECURITIES("ReportDefinition.Style.Securities", false)
         ;
         
         private final String stringResourceId;
@@ -255,6 +256,9 @@ public class ReportDefinition extends CompositeObservable {
             case PORTFOLIO :
                 return standardPortfolioDefinition();
                 
+            case SECURITIES :
+                return standardSecuritiesDefinition();
+                
             default :
                 return new ReportDefinition();
         }
@@ -322,6 +326,16 @@ public class ReportDefinition extends CompositeObservable {
 
         definition.setGrandTotalText(ResourceSource.getString("Report.GrandTotal.Portfolio"));
         
+        return definition;
+    }
+    
+    
+    public static ReportDefinition standardSecuritiesDefinition() {
+        ReportDefinition definition = standardPortfolioDefinition();
+        
+        definition.setTitle(ResourceSource.getString("Report.Title.Securities"));
+        definition.setStyle(Style.SECURITIES);
+
         return definition;
     }
     

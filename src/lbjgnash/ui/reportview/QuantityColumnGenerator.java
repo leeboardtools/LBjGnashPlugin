@@ -36,4 +36,12 @@ public class QuantityColumnGenerator extends SecuritiesColumnGenerator {
         return reportOutput.toSharesQuantity(totalShares);
     }
     
+
+    @Override
+    protected String getSummaryEntryCellValue(DatedSummaryEntryInfo datedAccountEntryInfo, DateEntryInfo dateEntryInfo, ReportDataView.ReportOutput reportOutput) {
+        if (datedAccountEntryInfo.totalQuantity != null) {
+            return reportOutput.toSharesQuantity(datedAccountEntryInfo.totalQuantity);
+        }
+        return null;
+    }
 }

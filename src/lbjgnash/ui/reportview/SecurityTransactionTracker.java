@@ -205,7 +205,7 @@ public class SecurityTransactionTracker {
                 }
                 
                 BigDecimal costBasis = securityLot.getCostBasis();
-                if (costBasis.compareTo(BigDecimal.ZERO) == 0) {
+                if (costBasis.compareTo(BigDecimal.ZERO) <= 0) {
                     continue;
                 }
                 

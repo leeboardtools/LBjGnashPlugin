@@ -38,7 +38,7 @@ public class PercentGainColumnGenerator extends SecuritiesColumnGenerator {
     }
 
     @Override
-    protected String getSummaryEntryCellValue(DatedSummaryEntryInfo datedAccountEntryInfo, AccountEntryInfo accountEntryInfo, DateEntryInfo dateEntryInfo, ReportDataView.ReportOutput reportOutput) {
+    protected String getSummaryEntryCellValue(DatedSummaryEntryInfo datedAccountEntryInfo, DateEntryInfo dateEntryInfo, ReportDataView.ReportOutput reportOutput) {
         BigDecimal value = datedAccountEntryInfo.totalMarketValue.subtract(datedAccountEntryInfo.totalCostBasis);
         return reportOutput.toPercentString(value, datedAccountEntryInfo.totalCostBasis);
     }

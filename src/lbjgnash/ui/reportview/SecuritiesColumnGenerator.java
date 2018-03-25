@@ -27,6 +27,7 @@ import javafx.scene.control.cell.TextFieldTreeTableCell;
 import jgnash.engine.Account;
 import jgnash.engine.AccountGroup;
 import jgnash.engine.SecurityNode;
+import lbjgnash.ui.ReportDefinition;
 import org.hsqldb.lib.StringUtil;
 
 /**
@@ -37,6 +38,7 @@ abstract class SecuritiesColumnGenerator extends ColumnGenerator {
     protected final Map<AccountEntry, AccountEntryInfo> accountEntryInfos = new HashMap<>();
     protected final Map<DateEntry, DateEntryInfo> dateEntryInfos = new HashMap<>();
     
+    protected static final String CASH_SYMBOL = "_Cash_";
     
     protected static class SecurityRowEntry {
         final SecurityTransactionTracker transactionTracker;
@@ -63,12 +65,17 @@ abstract class SecuritiesColumnGenerator extends ColumnGenerator {
     
     protected static class DatedSummaryEntryInfo {
         protected final ColumnEntry columnEntry;
+        protected final AccountEntryInfo reportingAccountEntryInfo;
+        
         protected BigDecimal totalCostBasis = BigDecimal.ZERO;
         protected BigDecimal totalMarketValue = BigDecimal.ZERO;
         protected BigDecimal yearAgoValueSum = BigDecimal.ZERO;
+        protected BigDecimal totalQuantity = null;
+        protected BigDecimal price = null;
         
-        protected DatedSummaryEntryInfo(ColumnEntry columnEntry) {
+        protected DatedSummaryEntryInfo(ColumnEntry columnEntry, AccountEntryInfo reportingAccountEntryInfo) {
             this.columnEntry = columnEntry;
+            this.reportingAccountEntryInfo = reportingAccountEntryInfo;
         }
     }
     
@@ -90,7 +97,8 @@ abstract class SecuritiesColumnGenerator extends ColumnGenerator {
     protected static class DateEntryInfo {
         protected final DateEntry dateEntry;
         protected final Map<SecurityRowEntry, DatedSecurityEntryInfo> datedSecurityEntryInfos = new HashMap<>();
-        protected final Map<AccountEntry, DatedSummaryEntryInfo> datedSummaryEntryInfos = new HashMap<>();
+        protected final Map<AccountEntry, DatedSummaryEntryInfo> accountDatedSummaryEntryInfos = new HashMap<>();
+        protected final Map<String, DatedSummaryEntryInfo> securityDatedSummaryEntryInfos = new HashMap<>();
         protected final ColumnEntry columnEntry;
         
         protected BigDecimal totalCostBasis = BigDecimal.ZERO;
@@ -172,6 +180,9 @@ abstract class SecuritiesColumnGenerator extends ColumnGenerator {
         }
     }
     
+    boolean usesNamedRowEntries(ReportDataView.ReportOutput reportOutput) {
+        return reportOutput.getDefinition().getStyle() == ReportDefinition.Style.SECURITIES;
+    }
 
     @Override
     protected void setupRowsForAccountEntry(AccountEntry accountEntry, ReportDataView.ReportOutput reportOutput, AccountEntry parentAccountEntry) {
@@ -191,18 +202,22 @@ abstract class SecuritiesColumnGenerator extends ColumnGenerator {
                     if (accountEntryInfo == null) {
                         accountEntryInfo = new AccountEntryInfo(parentAccountEntry);
                         accountEntryInfos.put(parentAccountEntry, accountEntryInfo);
-                        parentAccountEntry.useSummaryRowEntry();
+                        if (!usesNamedRowEntries(reportOutput)) {
+                            parentAccountEntry.useSummaryRowEntry();
+                        }
                     }
                 }
                 else {
                     accountEntryInfo = new AccountEntryInfo(accountEntry);
                     accountEntryInfos.put(accountEntry, accountEntryInfo);
-                    accountEntry.useSummaryRowEntry();
+                    if (!usesNamedRowEntries(reportOutput)) {
+                        accountEntry.useSummaryRowEntry();
+                    }
                 }
 
                 for (Map.Entry<SecurityNode, SecurityTransactionTracker> entry : accountTracker.getTransactionTrackers().entrySet()) {
                     SecurityTransactionTracker transactionTracker = entry.getValue();
-                    addSecurityRowEntry(transactionTracker, accountEntryInfo);
+                    addSecurityRowEntry(reportOutput, transactionTracker, accountEntryInfo);
                 }
                 
                 isPossibleCashRow = false;
@@ -211,48 +226,68 @@ abstract class SecuritiesColumnGenerator extends ColumnGenerator {
         
         super.setupRowsForAccountEntry(accountEntry, reportOutput, parentAccountEntry);
         
-        if (isPossibleCashRow && (accountEntry.summaryRowEntry != null)) {
+        if (isPossibleCashRow) {
             AccountEntryInfo accountEntryInfo = accountEntryInfos.get(accountEntry);
             if (accountEntryInfo != null) {
                 AccountSecuritiesTracker accountTracker = accountEntry.getAccountSecuritiesTracker();
                 if (accountTracker != null) {
                     //addCashRowEntry(accountEntryInfo);
-                    accountEntry.useSummaryRowEntry();
+                    if (!usesNamedRowEntries(reportOutput)) {
+                        accountEntry.useSummaryRowEntry();
+                    }
+                    
                     for (Map.Entry<SecurityNode, SecurityTransactionTracker> entry : accountTracker.getTransactionTrackers().entrySet()) {
                         SecurityTransactionTracker transactionTracker = entry.getValue();
-                        addSecurityRowEntry(transactionTracker, accountEntryInfo);
+                        addSecurityRowEntry(reportOutput, transactionTracker, accountEntryInfo);
                     }
                 }
                 else {
-                    addCashRowEntry(accountEntryInfo);
+                    addCashRowEntry(reportOutput, accountEntryInfo);
                 }
             }
         }
     }
     
-    protected void addSecurityRowEntry(SecurityTransactionTracker transactionTracker, AccountEntryInfo accountEntryInfo) {
-        int rowIndex = accountEntryInfo.securityRowEntries.size();
-        AccountEntry accountEntry = accountEntryInfo.accountEntry;
-        RowEntry rowEntry = accountEntry.usePostChildAccountRowEntry(rowIndex);
+    protected void addSecurityRowEntry(ReportDataView.ReportOutput reportOutput, 
+            SecurityTransactionTracker transactionTracker, AccountEntryInfo accountEntryInfo) {
+        SecurityNode securityNode = transactionTracker.getSecurityNode();
+        String symbol = securityNode.getSymbol();
+        RowEntry rowEntry = useRowEntry(reportOutput, accountEntryInfo, symbol);
 
         rowEntry.setRowTitle(transactionTracker.getSecurityNode().getSymbol());
+        AccountEntry accountEntry = accountEntryInfo.accountEntry;
         SecurityRowEntry securityRowEntry = new SecurityRowEntry(transactionTracker, accountEntry, rowEntry);
         accountEntryInfo.securityRowEntries.add(securityRowEntry);
     }
     
-    protected void addCashRowEntry(AccountEntryInfo accountEntryInfo) {
-        int rowIndex = accountEntryInfo.securityRowEntries.size();
-        AccountEntry accountEntry = accountEntryInfo.accountEntry;
-        RowEntry rowEntry = accountEntry.usePostChildAccountRowEntry(rowIndex);
+    protected void addCashRowEntry(ReportDataView.ReportOutput reportOutput, AccountEntryInfo accountEntryInfo) {
+        RowEntry rowEntry = useRowEntry(reportOutput, accountEntryInfo, CASH_SYMBOL);
         
         rowEntry.setRowTitle(ResourceSource.getString("Report.CashRow"));
         SecurityRowEntry cashRowEntry = new SecurityRowEntry(null, accountEntryInfo.accountEntry, rowEntry);
         accountEntryInfo.securityRowEntries.add(cashRowEntry);
     }
     
+    protected RowEntry useRowEntry(ReportDataView.ReportOutput reportOutput, AccountEntryInfo accountEntryInfo, String name) {
+        if (usesNamedRowEntries(reportOutput)) {
+            RowEntry rowEntry = reportOutput.namedRowEntries.get(name);
+            if (rowEntry == null) {
+                rowEntry = new RowEntry();
+                reportOutput.namedRowEntries.put(name, rowEntry);
+            }
+            return rowEntry;
+        }
+        else {
+            int rowIndex = accountEntryInfo.securityRowEntries.size();
+            AccountEntry accountEntry = accountEntryInfo.accountEntry;
+            return accountEntry.usePostChildAccountRowEntry(rowIndex);
+        }
+    }
+    
 
     @Override
-    protected void setupColumnsForDateEntry(DateEntry dateEntry, AccountEntry accountEntry, ReportDataView.ReportOutput reportOutput, int columnIndexBase) {
+    protected void setupColumnsForDateEntry(DateEntry dateEntry, AccountEntry accountEntry, ReportDataView.ReportOutput reportOutput, 
+            int columnIndexBase) {
         AccountEntryInfo accountEntryInfo = accountEntryInfos.get(accountEntry);
         if (accountEntryInfo != null) {
             ColumnEntry columnEntry = dateEntry.getColumnEntryAtIndex(columnIndexBase);
@@ -270,13 +305,26 @@ abstract class SecuritiesColumnGenerator extends ColumnGenerator {
             }
             
             // Summary...
-            DatedSummaryEntryInfo datedSummaryEntryInfo = createDatedSummaryEntryInfo(accountEntryInfo, dateEntryInfo, 
-                    columnEntry, reportOutput, columnIndexBase);
-            dateEntryInfo.datedSummaryEntryInfos.put(accountEntry, datedSummaryEntryInfo);
+            DatedSummaryEntryInfo datedSummaryEntryInfo = null;
+            if (!usesNamedRowEntries(reportOutput)) {
+                datedSummaryEntryInfo = createDatedSummaryEntryInfo(accountEntryInfo, dateEntryInfo, 
+                        columnEntry, reportOutput, columnIndexBase);
+                dateEntryInfo.accountDatedSummaryEntryInfos.put(accountEntry, datedSummaryEntryInfo);
+            }
 
             for (SecurityRowEntry securityRowEntry : accountEntryInfo.securityRowEntries) {
-                DatedSecurityEntryInfo securityEntryInfo = createDatedSecurityEntryInfo(securityRowEntry, dateEntryInfo, columnEntry, reportOutput, columnIndexBase);
+                DatedSecurityEntryInfo securityEntryInfo = createDatedSecurityEntryInfo(securityRowEntry, dateEntryInfo, columnEntry, 
+                    reportOutput, columnIndexBase);
                 if (securityEntryInfo != null) {
+                    if (usesNamedRowEntries(reportOutput)) {
+                        String securityName = securityRowEntry.transactionTracker.getSecurityNode().getSymbol();
+                        datedSummaryEntryInfo = dateEntryInfo.securityDatedSummaryEntryInfos.get(securityName);
+                        if (datedSummaryEntryInfo == null) {
+                            datedSummaryEntryInfo = createDatedSummaryEntryInfo(securityName, accountEntryInfo, dateEntryInfo, columnEntry, 
+                                reportOutput, columnIndexBase);
+                            dateEntryInfo.securityDatedSummaryEntryInfos.put(securityName, datedSummaryEntryInfo);
+                        }
+                    }
                     dateEntryInfo.datedSecurityEntryInfos.put(securityRowEntry, securityEntryInfo);
 
                     if (securityEntryInfo.trackerDateEntry != null) {
@@ -319,7 +367,13 @@ abstract class SecuritiesColumnGenerator extends ColumnGenerator {
     
     protected DatedSummaryEntryInfo createDatedSummaryEntryInfo(AccountEntryInfo accountEntryInfo, DateEntryInfo dateEntryInfo,
             ColumnEntry columnEntry, ReportDataView.ReportOutput reportOutput, int columnIndexBase) {
-        DatedSummaryEntryInfo datedSummaryEntryInfo = new DatedSummaryEntryInfo(columnEntry);
+        DatedSummaryEntryInfo datedSummaryEntryInfo = new DatedSummaryEntryInfo(columnEntry, accountEntryInfo);
+        return datedSummaryEntryInfo;
+    }
+    
+    protected DatedSummaryEntryInfo createDatedSummaryEntryInfo(String securityName, AccountEntryInfo accountEntryInfo, 
+            DateEntryInfo dateEntryInfo, ColumnEntry columnEntry, ReportDataView.ReportOutput reportOutput, int columnIndexBase) {
+        DatedSummaryEntryInfo datedSummaryEntryInfo = new DatedSummaryEntryInfo(columnEntry, accountEntryInfo);
         return datedSummaryEntryInfo;
     }
     
@@ -344,6 +398,19 @@ abstract class SecuritiesColumnGenerator extends ColumnGenerator {
                 reportOutput.getMinDaysForRateOfReturn());
         datedSummaryEntryInfo.yearAgoValueSum = datedSummaryEntryInfo.yearAgoValueSum.add(yearAgoValueSum);
         dateEntryInfo.yearAgoValueSum = dateEntryInfo.yearAgoValueSum.add(yearAgoValueSum);
+        
+        if (usesNamedRowEntries(reportOutput)) {
+            
+            BigDecimal quantity = datedSecurityEntryInfo.trackerDateEntry.getTotalShares();
+            if (datedSummaryEntryInfo.totalQuantity == null) {
+                datedSummaryEntryInfo.totalQuantity = quantity;
+            }
+            else {
+                datedSummaryEntryInfo.totalQuantity = datedSummaryEntryInfo.totalQuantity.add(quantity);
+            }
+            
+            datedSummaryEntryInfo.price =  datedSecurityEntryInfo.trackerDateEntry.getMarketPrice(date);
+        }
     }
 
     
@@ -361,41 +428,62 @@ abstract class SecuritiesColumnGenerator extends ColumnGenerator {
     
     @Override
     protected void updateCellValuesForDateEntryAccountEntry(DateEntry dateEntry, AccountEntry accountEntry, ReportDataView.ReportOutput reportOutput) {
-        AccountEntryInfo accountEntryInfo = accountEntryInfos.get(accountEntry);
         DateEntryInfo dateEntryInfo = dateEntryInfos.get(dateEntry);
-        if ((accountEntryInfo != null) && (dateEntryInfo != null)) {
-            DatedSummaryEntryInfo datedSummaryEntryInfo = dateEntryInfo.datedSummaryEntryInfos.get(accountEntry);
-            if (datedSummaryEntryInfo != null) {
-                // Summary...
-                String cellValue = getSummaryEntryCellValue(datedSummaryEntryInfo, accountEntryInfo, dateEntryInfo, reportOutput);
-                if (cellValue != null) {
-                    ColumnEntry columnEntry = datedSummaryEntryInfo.columnEntry;
-                    SecurityCellEntry cellEntry = new SecurityCellEntry(datedSummaryEntryInfo, accountEntry.summaryRowEntry, cellValue);
-                    accountEntry.summaryRowEntry.setExpandedColumnCellValue(columnEntry, cellEntry);
-                    accountEntry.summaryRowEntry.setNonExpandedColumnCellValue(columnEntry, cellEntry);
+        if (dateEntryInfo != null) {
+            if (!dateEntryInfo.securityDatedSummaryEntryInfos.isEmpty()) {
+                dateEntryInfo.securityDatedSummaryEntryInfos.forEach((securityName, datedSummaryEntryInfo) -> {
+                    // We're just summarizing all the accounts...
+                    RowEntry rowEntry = reportOutput.namedRowEntries.get(securityName);
+                    if (rowEntry != null) {
+                        String cellValue = getSummaryEntryCellValue(datedSummaryEntryInfo, dateEntryInfo, reportOutput);
+                        if (cellValue != null) {
+                            ColumnEntry columnEntry = datedSummaryEntryInfo.columnEntry;
+                            SecurityCellEntry cellEntry = new SecurityCellEntry(datedSummaryEntryInfo, rowEntry, cellValue);
+                            rowEntry.setExpandedColumnCellValue(columnEntry, cellEntry);
+                            rowEntry.setNonExpandedColumnCellValue(columnEntry, cellEntry);
+                        }
+                    }
+                });
+            }
+            else {
+                AccountEntryInfo accountEntryInfo = accountEntryInfos.get(accountEntry);
+                if (accountEntryInfo != null) {
+                    DatedSummaryEntryInfo datedSummaryEntryInfo = dateEntryInfo.accountDatedSummaryEntryInfos.get(accountEntry);
+                    if (datedSummaryEntryInfo != null) {
+                        // Summary...
+                        String cellValue = getSummaryEntryCellValue(datedSummaryEntryInfo, dateEntryInfo, reportOutput);
+                        if (cellValue != null) {
+                            ColumnEntry columnEntry = datedSummaryEntryInfo.columnEntry;
+                            if (accountEntry.summaryRowEntry != null) {
+                                SecurityCellEntry cellEntry = new SecurityCellEntry(datedSummaryEntryInfo, accountEntry.summaryRowEntry, cellValue);
+                                accountEntry.summaryRowEntry.setExpandedColumnCellValue(columnEntry, cellEntry);
+                                accountEntry.summaryRowEntry.setNonExpandedColumnCellValue(columnEntry, cellEntry);
+                            }
+                        }
+                    }
+
+                    final DatedSummaryEntryInfo finalDatedSummaryEntryInfo = datedSummaryEntryInfo;
+                    accountEntryInfo.securityRowEntries.forEach((SecurityRowEntry securityRowEntry) -> {
+                        DatedSecurityEntryInfo datedSecurityEntryInfo = dateEntryInfo.datedSecurityEntryInfos.get(securityRowEntry);
+                        if (datedSecurityEntryInfo != null) {
+                            ColumnEntry columnEntry = datedSecurityEntryInfo.columnEntry;
+                            String cellValue;
+                            if (datedSecurityEntryInfo.trackerDateEntry == null) {
+                                cellValue = getCashEntryCellValue(datedSecurityEntryInfo, finalDatedSummaryEntryInfo, dateEntryInfo, reportOutput);
+                            }
+                            else {
+                                cellValue = getSecurityEntryCellValue(datedSecurityEntryInfo, dateEntryInfo, reportOutput);
+                            }
+
+                            if ((cellValue != null) && (securityRowEntry.rowEntry != null)) {
+                                SecurityCellEntry cellEntry = new SecurityCellEntry(datedSecurityEntryInfo, securityRowEntry.rowEntry, cellValue);
+                                securityRowEntry.rowEntry.setExpandedColumnCellValue(columnEntry, cellEntry);
+                                securityRowEntry.rowEntry.setNonExpandedColumnCellValue(columnEntry, cellEntry);
+                            }
+                        }
+                    });
                 }
             }
-
-            final DatedSummaryEntryInfo finalDatedSummarEntryInfo = datedSummaryEntryInfo;
-            accountEntryInfo.securityRowEntries.forEach((SecurityRowEntry securityRowEntry) -> {
-                DatedSecurityEntryInfo datedSecurityEntryInfo = dateEntryInfo.datedSecurityEntryInfos.get(securityRowEntry);
-                if (datedSecurityEntryInfo != null) {
-                    ColumnEntry columnEntry = datedSecurityEntryInfo.columnEntry;
-                    String cellValue;
-                    if (datedSecurityEntryInfo.trackerDateEntry == null) {
-                        cellValue = getCashEntryCellValue(datedSecurityEntryInfo, finalDatedSummarEntryInfo, dateEntryInfo, reportOutput);
-                    }
-                    else {
-                        cellValue = getSecurityEntryCellValue(datedSecurityEntryInfo, dateEntryInfo, reportOutput);
-                    }
-
-                    if (cellValue != null) {
-                        SecurityCellEntry cellEntry = new SecurityCellEntry(datedSecurityEntryInfo, securityRowEntry.rowEntry, cellValue);
-                        securityRowEntry.rowEntry.setExpandedColumnCellValue(columnEntry, cellEntry);
-                        securityRowEntry.rowEntry.setNonExpandedColumnCellValue(columnEntry, cellEntry);
-                    }
-                }
-            });
         }
         
         super.updateCellValuesForDateEntryAccountEntry(dateEntry, accountEntry, reportOutput);
@@ -430,8 +518,7 @@ abstract class SecuritiesColumnGenerator extends ColumnGenerator {
             ReportDataView.ReportOutput reportOutput);
     
     
-    protected String getSummaryEntryCellValue(DatedSummaryEntryInfo datedSummaryEntryInfo, 
-            AccountEntryInfo accountEntryInfo, DateEntryInfo dateEntryInfo, ReportDataView.ReportOutput reportOutput) {
+    protected String getSummaryEntryCellValue(DatedSummaryEntryInfo datedSummaryEntryInfo, DateEntryInfo dateEntryInfo, ReportDataView.ReportOutput reportOutput) {
         return null;
     }
     
