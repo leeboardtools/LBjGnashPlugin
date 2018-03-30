@@ -44,6 +44,8 @@ The following are the columns supported:
 ### Cash Treatment
 Cash is treated as a security with a price of 1.0000. The quantity is the monetary amount of the cash.
 
+**Note:** For the Securities report, if you set the CUSIP/ISIN to "Cash", no quotes, the security will be treated as the Cash security and lumped with that. This is handy for treating money funds as cash.
+
 ### Lots in Portfolio Reports
 jGnash 2.34.0 does not support security lots. However, the portfolio reports support a mechanism for tracking lots. It's fairly limited, but serves my purposes. It works via the Memo field of a transaction.
 
