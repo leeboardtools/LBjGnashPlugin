@@ -13,10 +13,11 @@ The reports are primarily designed for screen use, there is currently no printin
 
 The reports let you select the date of the report, and optionally specify a number of periods over which to report. For example, you can display the last 5 years, every year, or every quarter.
 
-There are three built-in reports:
+There are four built-in reports:
 - Net Worth Report: This displays Assets, Liabilities, and the net worth (net worth = assets - liabilities) as of the current date.
 - Income - Expense Report: This dispays Income, Expenses, and the net income (net income = income - expenses) from the current date to a period of 1 year prior the current date.
 - Portfolio: This displays all sorts of information about accounts that have securities as of the current date.
+- Securities: This is similar to Portfolio except that it reports by security, not by account. A security common to multiple accounts is aggregated together and displayed as one entry.
 
 You can customize any of the built-in reports and save the customization as a report for future use. This is done by opening the report, customizing it via Configure command under the report window's Options button, and then saving it via the Save Setup command, also under the report window's Options button.
 
@@ -28,7 +29,7 @@ Report configurations are stored in the jGnash folder of your home folder.
 
 Also available in the Options button of the report window is the Export command, which lets you save the report in CSV (Comma Separated Values) format, for importing into a spreadsheet.
 
-## Portfolio Reports
+## Portfolio/Securities Reports
 The portfolio report was the driving force behind this plugin. 
 The following are the columns supported:
 - Quantity: The number of shares. For cash this is simply the cash value. This is only displayed for individual securities and appears blank for parent accounts.
@@ -42,6 +43,8 @@ The following are the columns supported:
 
 ### Cash Treatment
 Cash is treated as a security with a price of 1.0000. The quantity is the monetary amount of the cash.
+
+**Note:** For the Securities report, if you set the CUSIP/ISIN to "Cash", no quotes, the security will be treated as the Cash security and lumped with that. This is handy for treating money funds as cash.
 
 ### Lots in Portfolio Reports
 jGnash 2.34.0 does not support security lots. However, the portfolio reports support a mechanism for tracking lots. It's fairly limited, but serves my purposes. It works via the Memo field of a transaction.
