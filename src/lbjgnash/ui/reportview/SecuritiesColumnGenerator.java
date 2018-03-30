@@ -251,10 +251,10 @@ abstract class SecuritiesColumnGenerator extends ColumnGenerator {
     protected void addSecurityRowEntry(ReportDataView.ReportOutput reportOutput, 
             SecurityTransactionTracker transactionTracker, AccountEntryInfo accountEntryInfo) {
         SecurityNode securityNode = transactionTracker.getSecurityNode();
-        String symbol = securityNode.getSymbol();
+        String symbol = getNameForSecurity(reportOutput, securityNode);
         RowEntry rowEntry = useRowEntry(reportOutput, accountEntryInfo, symbol);
 
-        rowEntry.setRowTitle(transactionTracker.getSecurityNode().getSymbol());
+        rowEntry.setRowTitle(symbol);
         AccountEntry accountEntry = accountEntryInfo.accountEntry;
         SecurityRowEntry securityRowEntry = new SecurityRowEntry(transactionTracker, accountEntry, rowEntry);
         accountEntryInfo.securityRowEntries.add(securityRowEntry);
@@ -266,6 +266,14 @@ abstract class SecuritiesColumnGenerator extends ColumnGenerator {
         rowEntry.setRowTitle(ResourceSource.getString("Report.CashRow"));
         SecurityRowEntry cashRowEntry = new SecurityRowEntry(null, accountEntryInfo.accountEntry, rowEntry);
         accountEntryInfo.securityRowEntries.add(cashRowEntry);
+    }
+    
+    protected String getNameForSecurity(ReportDataView.ReportOutput reportOutput, SecurityNode securityNode) {
+        String cusId = securityNode.getISIN();
+        if ("Cash".equals(cusId)) {
+            return "Cash";
+        }
+        return securityNode.getSymbol();
     }
     
     protected RowEntry useRowEntry(ReportDataView.ReportOutput reportOutput, AccountEntryInfo accountEntryInfo, String name) {
@@ -317,7 +325,7 @@ abstract class SecuritiesColumnGenerator extends ColumnGenerator {
                     reportOutput, columnIndexBase);
                 if (securityEntryInfo != null) {
                     if (usesNamedRowEntries(reportOutput)) {
-                        String securityName = securityRowEntry.transactionTracker.getSecurityNode().getSymbol();
+                        String securityName = getNameForSecurity(reportOutput, securityRowEntry.transactionTracker.getSecurityNode());
                         datedSummaryEntryInfo = dateEntryInfo.securityDatedSummaryEntryInfos.get(securityName);
                         if (datedSummaryEntryInfo == null) {
                             datedSummaryEntryInfo = createDatedSummaryEntryInfo(securityName, accountEntryInfo, dateEntryInfo, columnEntry, 
