@@ -323,7 +323,7 @@ abstract class SecuritiesColumnGenerator extends ColumnGenerator {
             for (SecurityRowEntry securityRowEntry : accountEntryInfo.securityRowEntries) {
                 DatedSecurityEntryInfo securityEntryInfo = createDatedSecurityEntryInfo(securityRowEntry, dateEntryInfo, columnEntry, 
                     reportOutput, columnIndexBase);
-                if (securityEntryInfo != null) {
+                if ((securityEntryInfo != null) && (securityRowEntry.transactionTracker != null)) {
                     if (usesNamedRowEntries(reportOutput)) {
                         String securityName = getNameForSecurity(reportOutput, securityRowEntry.transactionTracker.getSecurityNode());
                         datedSummaryEntryInfo = dateEntryInfo.securityDatedSummaryEntryInfos.get(securityName);

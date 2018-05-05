@@ -357,6 +357,8 @@ public class SecurityTransactionTracker {
                 break;
                 
             case REINVESTDIV:
+                newLot = newLotForTransaction(transaction);
+                action = new SecurityLotAction.AddLot(newLot);
                 break;
                 
             case REMOVESHARE:
