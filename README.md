@@ -94,4 +94,4 @@ When the cash transaction is treated as income from the cash account, it is dist
 
 # Building the Plugin
 The plugin was developed using Netbeans 8.2 (https://netbeans.org/downloads/), I recommend using it to build the JAR.
-The Netbeans project is set up to expect jGnash 2.34.0 to be installed in a folder named 'jgnash_install' within the same folder that contains the LBjGnashPlugin folder. If you have a different version of jGnash, or have it in a different location, you will need to edit the Libraries in the Netbeans project. Just include all the JARs in the lib folder of your jGnash installation.
+The Netbeans project is set up to expect jGnash 2.36.2 to be installed in a folder named 'jgnash_install' within the same folder that contains the LBjGnashPlugin folder. If you have a different version of jGnash, or have it in a different location, you will need to edit the Libraries in the Netbeans project. Just include all the JARs in the lib folder of your jGnash installation.
