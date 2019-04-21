@@ -6,7 +6,7 @@ The plugin currently adds customizable reports to jGnash via the LeeboardTools R
 **IMPORTANT:** This plugin is **Use-At-Your-Own-Risk!!!** It is your responsibility to verify that what's reported is in fact correct and what you expect. Testing primarily consists of my running these reports on my jGnash accounts and satisfying my expectations. Your accounts may be significantly different, which may or may not result in unexpected behavior.
 
 # Installing the plugin
-Download the JAR file from https://github.com/leeboardtools/LBjGnashPlugin/blob/master/dist/LBJGnashPlugin.jar to the plugins folder of your jGnash installation. Note that this has only been tested with jGnash 2.34.0.
+Download the JAR file from https://github.com/leeboardtools/LBjGnashPlugin/blob/master/dist/LBJGnashPlugin.jar to the plugins folder of your jGnash installation. Note that this has only been tested with jGnash 3.0.2.
 
 # Reports
 The reports are primarily designed for screen use, there is currently no printing support. There is exporting to CSV files so you can import the data into a spreadsheet and prettify them there for printing.
@@ -47,7 +47,7 @@ Cash is treated as a security with a price of 1.0000. The quantity is the moneta
 **Note:** For the Securities report, if you set the CUSIP/ISIN to "Cash", no quotes, the security will be treated as the Cash security and lumped with that. This is handy for treating money funds as cash.
 
 ### Lots in Portfolio Reports
-jGnash 2.34.0 does not support security lots. However, the portfolio reports support a mechanism for tracking lots. It's fairly limited, but serves my purposes. It works via the Memo field of a transaction.
+jGnash 3.0.2 does not support security lots. However, the portfolio reports support a mechanism for tracking lots. It's fairly limited, but serves my purposes. It works via the Memo field of a transaction.
 
 When you have a Buy Shares transaction, you can assign a name to the lot represented by the transaction by entering 'LOT:' (single-quotes excluded!) followed by the name of the lot. The lot name should not contain ';' or 'LOT:'.
 
@@ -93,5 +93,5 @@ When the cash transaction is treated as income from the cash account, it is dist
 
 
 # Building the Plugin
-The plugin was developed using Netbeans 8.2 (https://netbeans.org/downloads/), I recommend using it to build the JAR.
-The Netbeans project is set up to expect jGnash 2.36.2 to be installed in a folder named 'jgnash_install' within the same folder that contains the LBjGnashPlugin folder. If you have a different version of jGnash, or have it in a different location, you will need to edit the Libraries in the Netbeans project. Just include all the JARs in the lib folder of your jGnash installation.
+The plugin was developed using Netbeans 11.0 (https://netbeans.org/downloads/), I recommend using it to build the JAR.
+The Netbeans project is set up to expect jGnash 3.0.2 to be installed in a folder named 'jgnash_install' within the same folder that contains the LBjGnashPlugin folder. If you have a different version of jGnash, or have it in a different location, you will need to edit the Libraries in the Netbeans project. Just include all the JARs in the lib folder of your jGnash installation.

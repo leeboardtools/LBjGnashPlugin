@@ -82,9 +82,9 @@
     </target>
     <target depends="init,compile,jar" name="-debug-start-debuggee">
         <j2seproject3:debug>
-            <customize>
+            <customizeDebuggee>
                 <arg line="${application.args}"/>
-            </customize>
+            </customizeDebuggee>
         </j2seproject3:debug>
     </target>
 </project>
