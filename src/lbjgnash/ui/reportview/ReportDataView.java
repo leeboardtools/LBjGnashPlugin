@@ -432,6 +432,21 @@ public class ReportDataView {
             case MARKET_VALUE :
                 return new MarketValueColumnGenerator();
                 
+            case NET_GAIN :
+                return new NetGainColumnGenerator();
+                
+            case PERCENT_CASH_IN_GAIN :
+                return new PercentCashInGainColumnGenerator();
+                
+            case CASH_IN :
+                return new CashInColumnGenerator();
+                
+            case CASH_OUT :
+                return new CashOutColumnGenerator();
+                
+            case CASH_IN_ANNUAL_RATE_OF_RETURN :
+                return new CashInAnnualRateOfReturnColumnGenerator();
+                
             default:
                 throw new AssertionError(columnType.name());
             

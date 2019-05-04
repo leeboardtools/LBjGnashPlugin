@@ -40,11 +40,18 @@ The following are the columns supported:
 - % Gain: (Market Value - Cost Basis) * 100 / Cost Basis.
 - % of Portfolio: Market Value * 100 / Portfolio Market Value
 - Annual %: An estimate of the equivalent annual rate of return of all the lots in the security. More on this below.
+- Cash In: This is the total cash used to purchase the security, excluding any reinvested dividend purchases.
+- Cash Out: This is the total proceeds from sales of the security.
+- Net Gain: Market Value + Cash Out - Cash In
+- % Cash-In Gain: (Market Value + Cash Out - Cash In) * 100 / Cash In
+- Cash In Annual % Return: Similar to Annual % except the Market Value + Cash Out is used in place of the market value and Cash In replaces the cost basis. More on this below.
+
 
 ### Cash Treatment
 Cash is treated as a security with a price of 1.0000. The quantity is the monetary amount of the cash.
 
-**Note:** For the Securities report, if you set the CUSIP/ISIN to "Cash", no quotes, the security will be treated as the Cash security and lumped with that. This is handy for treating money funds as cash.
+**Note:** For the Securities report, if you set the CUSIP/ISIN to "Cash", no quotes, the security will be treated as the Cash security and lumped with that. 
+This is handy for treating money funds as cash.
 
 ### Lots in Portfolio Reports
 jGnash 3.0.2 does not support security lots. However, the portfolio reports support a mechanism for tracking lots. It's fairly limited, but serves my purposes. It works via the Memo field of a transaction.
@@ -64,8 +71,8 @@ Then, if you sold the shares from December 27, 2016 and January 5, 2017, in a si
 
 If you do not specify lots in a Sell Shares transaction, the oldest shares will be sold first.
 
-### Annual % Column
-The Annual % column provides an estimate of the annual rate of return of the security. This is a multi-step process.
+### Annual % Return Column
+The Annual % Return column provides an estimate of the annual rate of return of the security. This is a multi-step process.
 
 For any given security lot, there is the market value of the lot, the cost basis of the lot, and the date of the cost basis. From this information compound annual growth rate (CAGR) is computed for the column's date:
 
@@ -91,7 +98,48 @@ At the moment a fairly simple approach is used. If any of the debit accounts in 
 
 When the cash transaction is treated as income from the cash account, it is distributed among all the current cash lots according to the size of the lot.
 
+### Cash-In/Cash-Out Treatment
+Note that this is still under development and is a bit crude.
+
+The cash-in/cash-out tracks the total inflows and outflows of cash, rather than individual lots.
+
+The idea behind cash-in/cash-out tracking is to be able to track the overall growth of the cash put into an investment,
+counting reinvested dividends and interest as growth of the original investment. This differs from the cost basis
+tracking because in the cost basis tracking reinvested dividends are treated as new investments.
+
+Cash-in/cash-out also tracks partial sales followed by repurchases. This is because sales add to the cash-out,
+while the repurchases are added to the cash-in.
+
+When a security is purchased that is not part of a reinvested dividend transaction (cash-in transactions are 
+basically any Buy transaction whose memo field does not contain 'reinvested'), the amount
+purchased and the date of the purchase are recorded, with the cash-in increasing by the purchase amount.
+
+When a security is sold, the sold amount is added to the cash-out. The cash-in record is not modified.
+
+If after a transaction the balance of the investment account is 0, the cash-in/cash-out tracking is reset. 
+Both totals are zeroed, and the list of tracked cash-ins is cleared.
+
+The Net Gain and % Cash-In Gain columns use a current value of Market Value + Total Cash Out, and a cost basis of Total Cash In.
+
+The Cash-In Annual % Return column uses a computation similar to the Annual % Return column, except that instead of lots the recorded cash-in amount/dates are
+used. The market value assigned to a particular cash-in entry is simply:
+    
+    Market Value = (Total Market Value + Total Cash Out) * Cash In Amount / Total Cash In
+
+and the cost basis is:
+
+    Cost Basis = Cash In Amount
+
+The YearAgoValue is computed and summed, and the Annual % value computed from that.
+
+This is currently a fairly simple accounting of cash-in/cash-out, as it does not properly allocate interest and dividends to the cash-in amounts.
+
 
 # Building the Plugin
 The plugin was developed using Netbeans 11.0 (https://netbeans.org/downloads/), I recommend using it to build the JAR.
-The Netbeans project is set up to expect jGnash 3.0.2 to be installed in a folder named 'jgnash_install' within the same folder that contains the LBjGnashPlugin folder. If you have a different version of jGnash, or have it in a different location, you will need to edit the Libraries in the Netbeans project. Just include all the JARs in the lib folder of your jGnash installation.
+JDK 11 must be installed. I use OpenJDK 11 on Ubuntu 18.04.
+
+The Netbeans project is set up to expect jGnash 3.0.2 to be installed in a folder named 'jgnash_install' 
+within the same folder that contains the LBjGnashPlugin folder. If you have a different version of jGnash, 
+or have it in a different location, you will need to edit the Libraries in the Netbeans project. 
+Just include all the JARs in the lib folder of your jGnash installation.

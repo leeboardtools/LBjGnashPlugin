@@ -17,7 +17,6 @@ package lbjgnash.ui.reportview;
 
 import com.leeboardtools.time.DateUtil;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -44,6 +43,21 @@ public class SecurityTransactionTracker {
     
     private final SecurityNode securityNode;
     private final TreeSet<DateEntry> dateEntries = new TreeSet<>();
+    
+    private BigDecimal totalCashIn = BigDecimal.ZERO;
+    private BigDecimal totalCashOut = BigDecimal.ZERO;
+    
+    // The members of this are taken from dateEntries.
+    private class CashInEntry {
+        final BigDecimal cashIn;
+        final LocalDate date;
+        
+        CashInEntry(BigDecimal cashIn, LocalDate date) {
+            this.cashIn = cashIn;
+            this.date = date;
+        }
+    }
+    private final ArrayList<CashInEntry> totalCashInEntries = new ArrayList<>();
 
 
     // We want to track cost-basis.
@@ -217,13 +231,71 @@ public class SecurityTransactionTracker {
                 double rateOfReturn = Math.pow(doubleValue / costBasis.doubleValue(), 1./time) - 1.;
                 
                 double doubleYearAgoValue = doubleValue / (1. + rateOfReturn);
-                BigDecimal yearAgoValue = BigDecimal.valueOf(doubleYearAgoValue).setScale(costBasis.scale(), RoundingMode.HALF_UP);
+                BigDecimal yearAgoValue = BigDecimal.valueOf(doubleYearAgoValue).setScale(costBasis.scale(), MathConstants.roundingMode);
                 yearAgoValueSum = yearAgoValueSum.add(yearAgoValue);
             }
             
             return yearAgoValueSum;
         }
 
+
+        /**
+         * @return The total cash used to make direct purchases (excludes reinvested dividends)
+         */
+        public final BigDecimal getTotalCashIn() {
+            return totalCashIn;
+        }
+
+        /**
+         * @return The total of the cash value of all security sales.
+         */
+        public final BigDecimal getTotalCashOut() {
+            return totalCashOut;
+        }
+
+
+        public BigDecimal calcCashInYearAgoValueSum(LocalDate date, int minDays, BigDecimal marketValue) {
+            if ((totalCashIn.compareTo(BigDecimal.ONE) <= 0) || totalCashInEntries.isEmpty()) {
+                return BigDecimal.ZERO;
+            }
+
+            LocalDate cutoffDate = date.minusDays(minDays);
+            BigDecimal currentTotalValue = marketValue.add(totalCashOut);
+            if (currentTotalValue.compareTo(BigDecimal.ZERO) == 0) {
+                return BigDecimal.ZERO;
+            }
+
+            BigDecimal yearAgoValueSum = BigDecimal.ZERO;
+
+            for (CashInEntry cashInEntry : totalCashInEntries) {
+                BigDecimal cashIn = cashInEntry.cashIn;
+                if (cashIn.compareTo(BigDecimal.ZERO) <= 0) {
+                    continue;
+                }
+
+                BigDecimal yearAgoValue;
+                if (!cashInEntry.date.isBefore(cutoffDate)) {
+                    yearAgoValue = cashIn;
+                }
+                else {
+                    BigDecimal value = currentTotalValue.multiply(cashIn).divide(totalCashIn, MathConstants.roundingMode);
+                    double doubleValue = value.doubleValue();
+
+                    // (Ending/Begining)^(1/time) - 1
+                    double time = DateUtil.getYearsUntil(cashInEntry.date, date);
+                    double ratio = Math.pow(doubleValue / cashIn.doubleValue(), 1./time);
+                    ratio = Math.max(ratio, 1e-5);
+
+                    double doubleYearAgoValue = doubleValue / ratio;
+                    yearAgoValue = BigDecimal.valueOf(doubleYearAgoValue).setScale(cashIn.scale(), MathConstants.roundingMode);
+                }
+
+                yearAgoValueSum = yearAgoValueSum.add(yearAgoValue);
+
+            }
+
+            return yearAgoValueSum;
+        }
         
         @Override
         public int compareTo(DateEntry o) {
@@ -254,7 +326,12 @@ public class SecurityTransactionTracker {
     
     public final void clearAll() {
         dateEntries.clear();
+        totalCashIn = BigDecimal.ZERO;
+        totalCashOut = BigDecimal.ZERO;
+        totalCashInEntries.clear();
     }
+    
+    
     
     
     public final void recordCashTransaction(Account cashAccount, Transaction transaction, BigDecimal amount) {
@@ -299,6 +376,9 @@ public class SecurityTransactionTracker {
             else {
                 SecurityLot newLot = new SecurityLot(lotId, date, amount, amount, null);
                 action = new SecurityLotAction.AddLot(newLot);
+
+                totalCashIn = totalCashIn.add(amount);
+                totalCashInEntries.add(new CashInEntry(amount, transaction.getLocalDate()));
             }
         }
         else {
@@ -314,6 +394,11 @@ public class SecurityTransactionTracker {
                 previousLots = new SecurityLots();
                 SecurityLot newLot = new SecurityLot(lotId, date, negativeShares, negativeShares, null);
                 action = new SecurityLotAction.AddLot(newLot);
+            }
+            
+            totalCashOut = totalCashOut.subtract(amount);
+            if (totalCashOut.compareTo(BigDecimal.ZERO) < 0) {
+                totalCashOut = BigDecimal.ZERO;
             }
         }
 
@@ -351,6 +436,11 @@ public class SecurityTransactionTracker {
             case BUYSHARE:
                 newLot = newLotForTransaction(transaction);
                 action = new SecurityLotAction.AddLot(newLot);
+                String memo = transaction.getMemo().toLowerCase();
+                if (!memo.contains("reinvested") && (cashValue.compareTo(BigDecimal.ZERO) > 0)) {
+                    totalCashIn = totalCashIn.add(cashValue);
+                    totalCashInEntries.add(new CashInEntry(cashValue, transaction.getLocalDate()));
+                }
                 break;
                 
             case DIVIDEND:
@@ -365,6 +455,7 @@ public class SecurityTransactionTracker {
                 break;
                 
             case RETURNOFCAPITAL:
+                totalCashOut = totalCashOut.add(cashValue);
                 break;
                 
             case SELLSHARE:
@@ -375,6 +466,7 @@ public class SecurityTransactionTracker {
                 else {
                     action = new SecurityLotAction.SellSpecificLots(date, lotShares);
                 }
+                totalCashOut = totalCashOut.add(cashValue);
                 break;
                 
             case SPLITSHARE:
@@ -388,6 +480,14 @@ public class SecurityTransactionTracker {
             default:
                 throw new AssertionError(transaction.getTransactionType().name());
             
+        }
+        
+        BigDecimal accountBalance = transaction.getInvestmentAccount().getBalance();
+        if (accountBalance.equals(BigDecimal.ZERO)) {
+            // We'll presume that once everything's sold we reset tracking.
+            totalCashIn = BigDecimal.ZERO;
+            totalCashOut = BigDecimal.ZERO;
+            totalCashInEntries.clear();
         }
         
         if (action == null) {

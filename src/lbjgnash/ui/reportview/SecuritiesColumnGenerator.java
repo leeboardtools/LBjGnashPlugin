@@ -67,6 +67,10 @@ abstract class SecuritiesColumnGenerator extends ColumnGenerator {
         protected final ColumnEntry columnEntry;
         protected final AccountEntryInfo reportingAccountEntryInfo;
         
+        protected BigDecimal totalCashIn = BigDecimal.ZERO;
+        protected BigDecimal totalCashOut = BigDecimal.ZERO;
+        protected BigDecimal cashInYearAgoValueSum = BigDecimal.ZERO;
+        
         protected BigDecimal totalCostBasis = BigDecimal.ZERO;
         protected BigDecimal totalMarketValue = BigDecimal.ZERO;
         protected BigDecimal yearAgoValueSum = BigDecimal.ZERO;
@@ -76,6 +80,10 @@ abstract class SecuritiesColumnGenerator extends ColumnGenerator {
         protected DatedSummaryEntryInfo(ColumnEntry columnEntry, AccountEntryInfo reportingAccountEntryInfo) {
             this.columnEntry = columnEntry;
             this.reportingAccountEntryInfo = reportingAccountEntryInfo;
+        }
+        
+        protected BigDecimal getNetGain() {
+            return calcNetGain(totalMarketValue, totalCashOut, totalCashIn);
         }
     }
     
@@ -91,6 +99,23 @@ abstract class SecuritiesColumnGenerator extends ColumnGenerator {
             this.trackerDateEntry = trackerDateEntry;
             this.columnEntry = columnEntry;
         }
+        
+        protected BigDecimal getNetGain(LocalDate endDate) {
+            return calcNetGain(trackerDateEntry.getMarketValue(endDate), trackerDateEntry);
+        }
+        protected BigDecimal getTotalCashIn() {
+            return trackerDateEntry.getTotalCashIn();
+        }
+        protected BigDecimal getTotalCashOut() {
+            return trackerDateEntry.getTotalCashOut();
+        }
+        protected BigDecimal getTotalValue(LocalDate endDate) {
+            return trackerDateEntry.getMarketValue(endDate).add(trackerDateEntry.getTotalCashOut());
+        }
+        protected BigDecimal getCashInYearAgoValueSum(LocalDate endDate, int minDays) {
+            BigDecimal marketValue = trackerDateEntry.getMarketValue(endDate);
+            return trackerDateEntry.calcCashInYearAgoValueSum(endDate, minDays, marketValue);
+        }
     }
     
     
@@ -101,6 +126,10 @@ abstract class SecuritiesColumnGenerator extends ColumnGenerator {
         protected final Map<String, DatedSummaryEntryInfo> securityDatedSummaryEntryInfos = new HashMap<>();
         protected final ColumnEntry columnEntry;
         
+        protected BigDecimal totalCashIn = BigDecimal.ZERO;
+        protected BigDecimal totalCashOut = BigDecimal.ZERO;
+        protected BigDecimal cashInYearAgoValueSum = BigDecimal.ZERO;
+        
         protected BigDecimal totalCostBasis = BigDecimal.ZERO;
         protected BigDecimal totalMarketValue = BigDecimal.ZERO;
         protected BigDecimal annualPercentRateOfReturn = BigDecimal.ZERO;
@@ -109,6 +138,10 @@ abstract class SecuritiesColumnGenerator extends ColumnGenerator {
         protected DateEntryInfo(DateEntry dateEntry, ColumnEntry columnEntry) {
             this.dateEntry = dateEntry;
             this.columnEntry = columnEntry;
+        }
+        
+        protected BigDecimal getNetGain() {
+            return calcNetGain(totalMarketValue, totalCashOut, totalCashIn);
         }
     }
     
@@ -183,6 +216,15 @@ abstract class SecuritiesColumnGenerator extends ColumnGenerator {
     boolean usesNamedRowEntries(ReportDataView.ReportOutput reportOutput) {
         return reportOutput.getDefinition().getStyle() == ReportDefinition.Style.SECURITIES;
     }
+    
+    protected static BigDecimal calcNetGain(BigDecimal marketValue, SecurityTransactionTracker.DateEntry trackerDateEntry) {
+        return calcNetGain(marketValue, trackerDateEntry.getTotalCashOut(), trackerDateEntry.getTotalCashIn());
+    }
+    
+    protected static BigDecimal calcNetGain(BigDecimal marketValue, BigDecimal totalCashOut, BigDecimal totalCashIn) {
+        return marketValue.add(totalCashOut).subtract(totalCashIn);
+    }
+    
 
     @Override
     protected void setupRowsForAccountEntry(AccountEntry accountEntry, ReportDataView.ReportOutput reportOutput, AccountEntry parentAccountEntry) {
@@ -406,6 +448,19 @@ abstract class SecuritiesColumnGenerator extends ColumnGenerator {
                 reportOutput.getMinDaysForRateOfReturn());
         datedSummaryEntryInfo.yearAgoValueSum = datedSummaryEntryInfo.yearAgoValueSum.add(yearAgoValueSum);
         dateEntryInfo.yearAgoValueSum = dateEntryInfo.yearAgoValueSum.add(yearAgoValueSum);
+        
+        BigDecimal totalCashIn = datedSecurityEntryInfo.trackerDateEntry.getTotalCashIn();
+        datedSummaryEntryInfo.totalCashIn = datedSummaryEntryInfo.totalCashIn.add(totalCashIn);
+        dateEntryInfo.totalCashIn = dateEntryInfo.totalCashIn.add(totalCashIn);
+        
+        BigDecimal totalCashOut = datedSecurityEntryInfo.trackerDateEntry.getTotalCashOut();
+        datedSummaryEntryInfo.totalCashOut = datedSummaryEntryInfo.totalCashOut.add(totalCashOut);
+        dateEntryInfo.totalCashOut = dateEntryInfo.totalCashOut.add(totalCashOut);
+        
+        BigDecimal cashInYearAgoValueSum = datedSecurityEntryInfo.getCashInYearAgoValueSum(date, 
+                reportOutput.getMinDaysForRateOfReturn());
+        datedSummaryEntryInfo.cashInYearAgoValueSum = datedSummaryEntryInfo.cashInYearAgoValueSum.add(cashInYearAgoValueSum);
+        dateEntryInfo.cashInYearAgoValueSum = dateEntryInfo.cashInYearAgoValueSum.add(cashInYearAgoValueSum);
         
         if (usesNamedRowEntries(reportOutput)) {
             

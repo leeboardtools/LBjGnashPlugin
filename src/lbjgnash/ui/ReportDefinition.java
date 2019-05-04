@@ -215,6 +215,11 @@ public class ReportDefinition extends CompositeObservable {
         PERCENT_PORTFOLIO("ReportDefinition.ColumnType.PercentPortfolio"),
         ANNUAL_RATE_OF_RETURN("ReportDefinition.ColumnType.AnnualRateOfReturn"),
         MARKET_VALUE("ReportDefinition.ColumnType.MarketValue"),
+        NET_GAIN("ReportDefinition.ColumnType.NetGain"),
+        PERCENT_CASH_IN_GAIN("ReportDefinition.ColumnType.PercentCashInGain"),
+        CASH_IN("ReportDefinition.ColumnType.CashIn"),
+        CASH_OUT("ReportDefinition.ColumnType.CashOut"),
+        CASH_IN_ANNUAL_RATE_OF_RETURN("ReportDefinition.ColumnType.CashInAnnualRateOfReturn"),
         ;
         
         private final String stringResourceId;
@@ -378,8 +383,13 @@ public class ReportDefinition extends CompositeObservable {
         }
         
         JSONLite.fillFromJSONValue(jsonObject.getValue("columnTypes"), definition.getColumnTypes(), (jsonValue) -> {
-            return jsonValue.getEnumValue(ColumnType.values());
-        });
+            try {
+                return jsonValue.getEnumValue(ColumnType.values());
+            }
+            catch (Exception e) {
+                return null;
+            }
+        }, false);
         
         jsonObject.callIfValue("grandTotalText", (jsonValue) -> { definition.setGrandTotalText(jsonValue.getStringValue()); });
         

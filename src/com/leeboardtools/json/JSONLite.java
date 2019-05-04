@@ -360,6 +360,19 @@ public class JSONLite {
      * @param converter The converter callback.
      */
     public static <T> void fillFromJSONValue(JSONValue jsonValue, Collection<T> collection, Callback<JSONValue, T> converter) {
+        fillFromJSONValue(jsonValue, collection, converter, true);
+    }
+    
+    /**
+     * Populates a collection from the values in a JSON array. A converter callback is used
+     * to convert the individual JSON values into the collection items.
+     * @param <T>   The collection item type.
+     * @param jsonValue The JSON value to be converted.
+     * @param collection    The collection to be populated, it is cleared on entry.
+     * @param converter The converter callback.
+     * @param allowNull If <code>false</code> any <code>null</code>s returned by the converter are ignored.
+     */
+    public static <T> void fillFromJSONValue(JSONValue jsonValue, Collection<T> collection, Callback<JSONValue, T> converter, boolean allowNull) {
         collection.clear();
         
         if (jsonValue == null) {
@@ -369,7 +382,11 @@ public class JSONLite {
         JSONValue [] jsonArray = jsonValue.getArrayValue();
         if (jsonArray != null) {
             for (JSONValue value : jsonArray) {
-                collection.add(converter.call(value));
+                T item = converter.call(value);
+                if ((item == null) && !allowNull) {
+                    continue;
+                }
+                collection.add(item);
             }
         }
     }
