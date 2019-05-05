@@ -18,6 +18,7 @@ package lbjgnash.ui.reportview;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.Month;
+import java.math.RoundingMode;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
@@ -34,11 +35,11 @@ public class SecurityLotTest {
     public void testRemoveShares() {
         System.out.println("removeShares");
         
-        BigDecimal price = new BigDecimal(12.3456);
-        BigDecimal shares = new BigDecimal(100);
-        BigDecimal costBasis = shares.multiply(price);
+        BigDecimal price = new BigDecimal(12.3456).setScale(4, RoundingMode.HALF_UP);
+        BigDecimal shares = new BigDecimal(100).setScale(4);
+        BigDecimal costBasis = shares.multiply(price).setScale(2);
         
-        SecurityLot lotA = new SecurityLot("Abc", LocalDate.of(2017,3,21), shares, costBasis, null);
+        SecurityLot lotA = new SecurityLot("Abc", LocalDate.of(2017,3,21), shares, costBasis, null, null);
         assertEquals("Abc", lotA.getLotId());
         assertEquals(LocalDate.of(2017,3,21), lotA.getDate());
         assertEquals(shares, lotA.getShares());
@@ -46,8 +47,8 @@ public class SecurityLotTest {
         assertEquals(LocalDate.of(2017,3,21), lotA.getCostBasisDate());
         
         BigDecimal sharesToRemove = new BigDecimal(25);
-        BigDecimal remainingShares = new BigDecimal(75);
-        BigDecimal remainingCostBasis = remainingShares.multiply(price);
+        BigDecimal remainingShares = new BigDecimal(75).setScale(4);
+        BigDecimal remainingCostBasis = remainingShares.multiply(price).setScale(2);
         
         SecurityLot lotB = lotA.removeShares(LocalDate.of(2018,2,3), sharesToRemove);
         assertEquals(LocalDate.of(2018,2,3), lotB.getDate());
@@ -63,20 +64,20 @@ public class SecurityLotTest {
     public void testScaleShares() {
         System.out.println("scaleShares");
                 
-        BigDecimal price = new BigDecimal(20);
-        BigDecimal shares = new BigDecimal(100);
-        BigDecimal costBasis = shares.multiply(price);
+        BigDecimal price = new BigDecimal(20).setScale(4, RoundingMode.HALF_UP);
+        BigDecimal shares = new BigDecimal(100).setScale(4);
+        BigDecimal costBasis = shares.multiply(price).setScale(2);
         
-        SecurityLot lotA = new SecurityLot("Abc", LocalDate.of(2017,3,21), shares, costBasis, null);
+        SecurityLot lotA = new SecurityLot("Abc", LocalDate.of(2017,3,21), shares, costBasis, null, null);
         
         SecurityLot lotB = lotA.scaleShares(LocalDate.of(2018, 3, 4), new BigDecimal(2), new BigDecimal(3));
         assertEquals(costBasis, lotB.getCostBasis());
-        assertEquals(new BigDecimal(150), lotB.getShares());
+        assertEquals(new BigDecimal(150).setScale(4), lotB.getShares());
         assertEquals(LocalDate.of(2017,3,21), lotB.getCostBasisDate());
         assertEquals(LocalDate.of(2018,3,4), lotB.getDate());
         
         lotB = lotA.scaleShares(LocalDate.of(2018, 3, 4), new BigDecimal(5), new BigDecimal(2));
-        assertEquals(new BigDecimal(40), lotB.getShares());
+        assertEquals(new BigDecimal(40).setScale(4), lotB.getShares());
     }
 
     @Test
@@ -84,10 +85,10 @@ public class SecurityLotTest {
         System.out.println("compareTo");
         String id = "Abc";
         LocalDate date = LocalDate.of(2018,2,3);
-        BigDecimal shares = new BigDecimal(100);
-        BigDecimal costBasis = new BigDecimal(1000);
-        SecurityLot lotA = new SecurityLot(id, date, shares, costBasis, LocalDate.of(2017,3,4));
-        SecurityLot lotB = new SecurityLot(id, date, shares, costBasis, LocalDate.of(2017,3,5));
+        BigDecimal shares = new BigDecimal(100).setScale(4, RoundingMode.HALF_UP);
+        BigDecimal costBasis = new BigDecimal(1000).setScale(2);
+        SecurityLot lotA = new SecurityLot(id, date, shares, costBasis, LocalDate.of(2017,3,4), null);
+        SecurityLot lotB = new SecurityLot(id, date, shares, costBasis, LocalDate.of(2017,3,5), null);
         
         int result = lotA.compareTo(lotB);
         assertTrue(result < 0);
@@ -95,7 +96,7 @@ public class SecurityLotTest {
         result = lotB.compareTo(lotA);
         assertTrue(result > 0);
         
-        lotB = new SecurityLot(id, date, shares, costBasis, lotA.getCostBasisDate());
+        lotB = new SecurityLot(id, date, shares, costBasis, lotA.getCostBasisDate(), null);
         result = lotA.compareTo(lotB);
         assertEquals(0, result);
         

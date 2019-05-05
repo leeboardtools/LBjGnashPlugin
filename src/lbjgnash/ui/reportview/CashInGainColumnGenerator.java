@@ -22,28 +22,28 @@ import java.math.BigDecimal;
  *
  * @author Albert Santos
  */
-public class CashOutColumnGenerator extends SecuritiesColumnGenerator {
+public class CashInGainColumnGenerator extends SecuritiesColumnGenerator {
 
     @Override
     protected String getColumnTitle(AccountEntry accountEntry, DateEntry dateEntry, ReportDataView.ReportOutput reportOutput) {
-        return ResourceSource.getString("Report.ColumnHeading.CashOut");
+        return ResourceSource.getString("Report.ColumnHeading.CashInGain");
     }
 
     @Override
     protected String getSecurityEntryCellValue(DatedSecurityEntryInfo securityEntryInfo, DateEntryInfo dateEntryInfo, ReportDataView.ReportOutput reportOutput) {
-        BigDecimal value = securityEntryInfo.getTotalCashOut();
+        BigDecimal value = securityEntryInfo.getNetGain(dateEntryInfo.dateEntry.endDate);
         return reportOutput.toMonetaryValueString(value, securityEntryInfo.securityRowEntry.accountEntry.account);
     }
 
     @Override
     protected String getSummaryEntryCellValue(DatedSummaryEntryInfo datedAccountEntryInfo, DateEntryInfo dateEntryInfo, ReportDataView.ReportOutput reportOutput) {
-        BigDecimal value = datedAccountEntryInfo.totalCashOut;
+        BigDecimal value = datedAccountEntryInfo.getNetGain();
         return reportOutput.toMonetaryValueString(value, datedAccountEntryInfo.reportingAccountEntryInfo.accountEntry.account);
     }
     
     @Override
     protected String getGrandTotalCellValue(DateEntryInfo dateEntryInfo, ReportDataView.ReportOutput reportOutput) {
-        BigDecimal value = dateEntryInfo.totalCashOut;
+        BigDecimal value = dateEntryInfo.getNetGain();
         return reportOutput.toMonetaryValueString(value, null);
     }
 }

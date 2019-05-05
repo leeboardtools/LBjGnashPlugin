@@ -105,6 +105,10 @@ public class AccountSecuritiesTracker {
                 addCashTransaction(transaction);
             }
         });
+        
+        transactionTrackers.forEach((securityNode, tracker) -> {
+            tracker.finalizeTransactions();
+        });
     }
     
     protected void addInvestmentTransaction(InvestmentTransaction transaction) {

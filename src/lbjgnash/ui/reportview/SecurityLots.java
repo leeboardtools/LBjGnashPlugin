@@ -41,6 +41,7 @@ public class SecurityLots {
     private final SortedSet<SecurityLot> readOnlySecurityLots;
     private BigDecimal totalShares;
     private BigDecimal totalCostBasis;
+    private BigDecimal totalCashIn;
     
     
     /**
@@ -114,15 +115,59 @@ public class SecurityLots {
         return totalCostBasis;
     }
     
+    /**
+     * @return The total cash-in.
+     */
+    public final BigDecimal getTotalCashIn() {
+        useTotals();
+        return totalCashIn;
+    }
+    
     protected void useTotals() {
         if (totalShares == null) {
             totalShares = BigDecimal.ZERO;
             totalCostBasis = BigDecimal.ZERO;
+            totalCashIn = BigDecimal.ZERO;
+            
             securityLots.forEach((securityLot) -> {
                 totalShares = totalShares.add(securityLot.getShares());
                 totalCostBasis = totalCostBasis.add(securityLot.getCostBasis());
+                totalCashIn = totalCashIn.add(securityLot.getCashInBasis());
             });
         }
+    }
+    
+    /**
+     * Returns the number of shares in lots that are on or after a given date.
+     * @param date  The date of interest.
+     * @return The number of shares.
+     */
+    public final BigDecimal getSharesAfterDate(LocalDate date) {
+        BigDecimal shares = BigDecimal.ZERO;
+        Iterator<SecurityLot> iterator = securityLots.descendingIterator();
+        while (iterator.hasNext()) {
+            SecurityLot lot = iterator.next();
+            if (lot.getCostBasisDate().isBefore(date)) {
+                break;
+            }
+            
+            shares = shares.add(lot.getShares());
+        }
+        return shares;
+    }
+    
+    
+    /**
+     * Retrieves a new {@link SecurityLots} that has a lot added to it. If the lot
+     * does not have a cash-in basis, the value of the lot will be distributed among
+     * all the lots that have cash-in basis.
+     * @param lot   The lot to add.
+     * @return The new security lots.
+     */
+    public SecurityLots addLot(SecurityLot lot) {
+        SortedSet<SecurityLot> lots = new TreeSet<>(getSecurityLots());
+        lots.add(lot);
+        return new SecurityLots(lots);
     }
     
     
@@ -327,10 +372,11 @@ public class SecurityLots {
         
         if (securityLots.isEmpty() || (totalShares.compareTo(BigDecimal.ZERO) == 0)) {
             // No shares, have to add the shares as a lot.
-            SecurityLot newLot = new SecurityLot(SecurityLot.makeLotId(), date, cash, cash, null);
+            SecurityLot newLot = new SecurityLot(SecurityLot.makeLotId(), date, cash, cash, null, cash);
             newLots.add(newLot);
             return new SecurityLots(newLots);
         }
+        
         
         // Since we're cash, we don't have to worry about the market price, we can
         // work directly with shares.
@@ -356,8 +402,7 @@ public class SecurityLots {
             List<SecurityLot> lotsList = securityLotsByShares.get(shares);
             BigDecimal toDistribute;
             if (cashRemaining.compareTo(BigDecimal.ZERO) > 0) {
-                toDistribute = cash.multiply(shares).divide(totalShares, RoundingMode.HALF_UP);
-                toDistribute = toDistribute.setScale(cashScale, RoundingMode.HALF_UP);
+                toDistribute = cash.multiply(shares).divide(totalShares, cashScale, RoundingMode.HALF_UP);
                 
                 if ((newLots.size() + 1) == securityLots.size()) {
                     toDistribute = cashRemaining;
@@ -377,7 +422,7 @@ public class SecurityLots {
                 if (toDistribute != null) {
                     String lotId = SecurityLot.makeLotId();
                     BigDecimal newShares = lot.getShares().add(toDistribute);
-                    SecurityLot newLot = new SecurityLot(lotId, date, newShares, lot.getCostBasis(), lot.getCostBasisDate());
+                    SecurityLot newLot = new SecurityLot(lotId, date, newShares, lot.getCostBasis(), lot.getCostBasisDate(), lot.getCashInBasis());
                     newLots.add(newLot);
                     
                     cashRemaining = cashRemaining.subtract(toDistribute);

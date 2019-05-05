@@ -68,7 +68,6 @@ abstract class SecuritiesColumnGenerator extends ColumnGenerator {
         protected final AccountEntryInfo reportingAccountEntryInfo;
         
         protected BigDecimal totalCashIn = BigDecimal.ZERO;
-        protected BigDecimal totalCashOut = BigDecimal.ZERO;
         protected BigDecimal cashInYearAgoValueSum = BigDecimal.ZERO;
         
         protected BigDecimal totalCostBasis = BigDecimal.ZERO;
@@ -83,7 +82,7 @@ abstract class SecuritiesColumnGenerator extends ColumnGenerator {
         }
         
         protected BigDecimal getNetGain() {
-            return calcNetGain(totalMarketValue, totalCashOut, totalCashIn);
+            return totalMarketValue.subtract(totalCashIn);
         }
     }
     
@@ -101,20 +100,13 @@ abstract class SecuritiesColumnGenerator extends ColumnGenerator {
         }
         
         protected BigDecimal getNetGain(LocalDate endDate) {
-            return calcNetGain(trackerDateEntry.getMarketValue(endDate), trackerDateEntry);
+            return trackerDateEntry.getMarketValue(endDate).subtract(trackerDateEntry.getTotalCashIn());
         }
         protected BigDecimal getTotalCashIn() {
             return trackerDateEntry.getTotalCashIn();
         }
-        protected BigDecimal getTotalCashOut() {
-            return trackerDateEntry.getTotalCashOut();
-        }
-        protected BigDecimal getTotalValue(LocalDate endDate) {
-            return trackerDateEntry.getMarketValue(endDate).add(trackerDateEntry.getTotalCashOut());
-        }
         protected BigDecimal getCashInYearAgoValueSum(LocalDate endDate, int minDays) {
-            BigDecimal marketValue = trackerDateEntry.getMarketValue(endDate);
-            return trackerDateEntry.calcCashInYearAgoValueSum(endDate, minDays, marketValue);
+            return trackerDateEntry.getCashInYearAgoValueSum(endDate, minDays);
         }
     }
     
@@ -127,7 +119,6 @@ abstract class SecuritiesColumnGenerator extends ColumnGenerator {
         protected final ColumnEntry columnEntry;
         
         protected BigDecimal totalCashIn = BigDecimal.ZERO;
-        protected BigDecimal totalCashOut = BigDecimal.ZERO;
         protected BigDecimal cashInYearAgoValueSum = BigDecimal.ZERO;
         
         protected BigDecimal totalCostBasis = BigDecimal.ZERO;
@@ -141,7 +132,7 @@ abstract class SecuritiesColumnGenerator extends ColumnGenerator {
         }
         
         protected BigDecimal getNetGain() {
-            return calcNetGain(totalMarketValue, totalCashOut, totalCashIn);
+            return totalMarketValue.subtract(totalCashIn);
         }
     }
     
@@ -217,13 +208,6 @@ abstract class SecuritiesColumnGenerator extends ColumnGenerator {
         return reportOutput.getDefinition().getStyle() == ReportDefinition.Style.SECURITIES;
     }
     
-    protected static BigDecimal calcNetGain(BigDecimal marketValue, SecurityTransactionTracker.DateEntry trackerDateEntry) {
-        return calcNetGain(marketValue, trackerDateEntry.getTotalCashOut(), trackerDateEntry.getTotalCashIn());
-    }
-    
-    protected static BigDecimal calcNetGain(BigDecimal marketValue, BigDecimal totalCashOut, BigDecimal totalCashIn) {
-        return marketValue.add(totalCashOut).subtract(totalCashIn);
-    }
     
 
     @Override
@@ -452,10 +436,6 @@ abstract class SecuritiesColumnGenerator extends ColumnGenerator {
         BigDecimal totalCashIn = datedSecurityEntryInfo.trackerDateEntry.getTotalCashIn();
         datedSummaryEntryInfo.totalCashIn = datedSummaryEntryInfo.totalCashIn.add(totalCashIn);
         dateEntryInfo.totalCashIn = dateEntryInfo.totalCashIn.add(totalCashIn);
-        
-        BigDecimal totalCashOut = datedSecurityEntryInfo.trackerDateEntry.getTotalCashOut();
-        datedSummaryEntryInfo.totalCashOut = datedSummaryEntryInfo.totalCashOut.add(totalCashOut);
-        dateEntryInfo.totalCashOut = dateEntryInfo.totalCashOut.add(totalCashOut);
         
         BigDecimal cashInYearAgoValueSum = datedSecurityEntryInfo.getCashInYearAgoValueSum(date, 
                 reportOutput.getMinDaysForRateOfReturn());

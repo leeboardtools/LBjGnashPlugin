@@ -39,12 +39,11 @@ The following are the columns supported:
 - Gain: Market Value - Cost Basis.
 - % Gain: (Market Value - Cost Basis) * 100 / Cost Basis.
 - % of Portfolio: Market Value * 100 / Portfolio Market Value
-- Annual %: An estimate of the equivalent annual rate of return of all the lots in the security. More on this below.
-- Cash In: This is the total cash used to purchase the security, excluding any reinvested dividend purchases.
-- Cash Out: This is the total proceeds from sales of the security.
-- Net Gain: Market Value + Cash Out - Cash In
-- % Cash-In Gain: (Market Value + Cash Out - Cash In) * 100 / Cash In
-- Cash In Annual % Return: Similar to Annual % except the Market Value + Cash Out is used in place of the market value and Cash In replaces the cost basis. More on this below.
+- Annual % Return: An estimate of the equivalent annual rate of return of all the lots in the security. More on this below.
+- Cash-in: This is the total cash used to purchase the security, excluding any reinvested dividend purchases.
+- Cash-in Gain: Market Value - Cash-in
+- % Cash-in Gain: (Market Value - Cash In) * 100 / Cash In
+- Cash-in Annual % Return: Similar to Annual % Return except the cash-in replaces the cost basis. More on this below.
 
 
 ### Cash Treatment
@@ -74,7 +73,8 @@ If you do not specify lots in a Sell Shares transaction, the oldest shares will 
 ### Annual % Return Column
 The Annual % Return column provides an estimate of the annual rate of return of the security. This is a multi-step process.
 
-For any given security lot, there is the market value of the lot, the cost basis of the lot, and the date of the cost basis. From this information compound annual growth rate (CAGR) is computed for the column's date:
+For any given security lot, there is the market value of the lot, the cost basis of the lot, and the date of the cost basis. 
+From this information compound annual growth rate (CAGR) is computed for the column's date:
 
     CAGR = (Market Value / Cost Basis) ^ (1/time) - 1
     
@@ -92,47 +92,45 @@ The final Annual % value is computed simply from:
 
 The sub-totals for accounts is computed similarly by summing the total YearAgoValues and the total market values for each security in the account.
 
-For cash, things are a little tricky. The problem here is determining whether a cash inflow should be treated as essentially a new cash lot, or if the inflow is income from the cash account. 
+For cash, things are a little tricky. The problem here is determining whether a cash inflow should be treated as essentially a new cash lot, or 
+if the inflow is income from the cash account. 
 
-At the moment a fairly simple approach is used. If any of the debit accounts in the transaction is from an account belonging to the Income account group, the transaction is treated as income from the cash account.
+At the moment a fairly simple approach is used. If any of the debit accounts in the transaction is from an account belonging to the Income account group, 
+the transaction is treated as income from the cash account. You can make exceptions to this:
+
+- If the memo field contains the text '[cash-in]', excluding quotes, the transaction will be treated as a new cash lot.
+
+- If the Income account's description memo field contains the text '[cash-in]', excluding quotes, that account will not be
+treated as an Income account for the new cash lot purposes.
 
 When the cash transaction is treated as income from the cash account, it is distributed among all the current cash lots according to the size of the lot.
 
-### Cash-In/Cash-Out Treatment
-Note that this is still under development and is a bit crude.
+For cash outflows, the cash lots selected for 'selling' depends on two steps:
 
-The cash-in/cash-out tracks the total inflows and outflows of cash, rather than individual lots.
+- First any cash lots within 90 days of the date of the cash-out transaction are sold.
 
-The idea behind cash-in/cash-out tracking is to be able to track the overall growth of the cash put into an investment,
-counting reinvested dividends and interest as growth of the original investment. This differs from the cost basis
-tracking because in the cost basis tracking reinvested dividends are treated as new investments.
+- After those first lots, lots are taken from the oldest cash lots.
 
-Cash-in/cash-out also tracks partial sales followed by repurchases. This is because sales add to the cash-out,
-while the repurchases are added to the cash-in.
+The idea behind the 90 day threshold is to try to reduce the influence of cash lots that are too new to provide an accurate
+rate of return based on CAGR. The 90 days represents a financial quarter, and hopefully any interest is received
+within 90 days.
 
-When a security is purchased that is not part of a reinvested dividend transaction (cash-in transactions are 
-basically any Buy transaction whose memo field does not contain 'reinvested'), the amount
-purchased and the date of the purchase are recorded, with the cash-in increasing by the purchase amount.
 
-When a security is sold, the sold amount is added to the cash-out. The cash-in record is not modified.
+### Cash-in Treatment
+The normal cost basis is applied to all incoming lots, whether purchased directly or as a result
+of a reinvested dividend. When a rate of return is calculated using the normal cost basis,
+the increase in value due to reinvested dividends is not accounted for.
 
-If after a transaction the balance of the investment account is 0, the cash-in/cash-out tracking is reset. 
-Both totals are zeroed, and the list of tracked cash-ins is cleared.
+The cash-in stuff is designed to include reinvested dividends in the return. The cash-in is the cost basis
+of only lots that are directly purchased, and excludes reinvested dividends.
 
-The Net Gain and % Cash-In Gain columns use a current value of Market Value + Total Cash Out, and a cost basis of Total Cash In.
+When computing CAGR, lots that do not have a cash-in basis (i.e. reinvested dividends), are distributed
+among all lots that do have a cash-in basis and are older than the lot to be distributed. The distribution
+is made based upon the cash-in basis of the lots receiving the distributed value.
 
-The Cash-In Annual % Return column uses a computation similar to the Annual % Return column, except that instead of lots the recorded cash-in amount/dates are
-used. The market value assigned to a particular cash-in entry is simply:
-    
-    Market Value = (Total Market Value + Total Cash Out) * Cash In Amount / Total Cash In
-
-and the cost basis is:
-
-    Cost Basis = Cash In Amount
-
-The YearAgoValue is computed and summed, and the Annual % value computed from that.
-
-This is currently a fairly simple accounting of cash-in/cash-out, as it does not properly allocate interest and dividends to the cash-in amounts.
+After the shares of these lots have been distributed to the lots with cash-in basis, CAGR and year ago values
+are computed as described in the Annual % Return Column section, but only the lots with cash-in
+basis are used, along with their updated market values.
 
 
 # Building the Plugin

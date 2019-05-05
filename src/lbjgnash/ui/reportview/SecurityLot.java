@@ -33,6 +33,8 @@ public class SecurityLot implements Comparable<SecurityLot> {
     private final LocalDate costBasisDate;
     private final BigDecimal shares;
     private final BigDecimal costBasis;
+    private final BigDecimal cashInBasis;
+    
     
     /**
      * @return Retrieves a lot id that's unique amongst all the lot ids returned
@@ -50,13 +52,17 @@ public class SecurityLot implements Comparable<SecurityLot> {
      * @param costBasis The cost-basis.
      * @param costBasisDate The date associated with the cost-basis, used when a lot is adjusted. If
      * <code>null</code> the date will be used.
+     * @param cashInBasis   The cash-in basis of the lot, representing the value to associate with the lot.
+     * Normally only lots that have been bought directly, as opposed to say as the result of a reinvested dividend,
+     * have a non-zero cash-in basis.
      */
-    public SecurityLot(String lotId, LocalDate date, BigDecimal shares, BigDecimal costBasis, LocalDate costBasisDate) {
+    public SecurityLot(String lotId, LocalDate date, BigDecimal shares, BigDecimal costBasis, LocalDate costBasisDate, BigDecimal cashInBasis) {
         this.lotId = lotId;
         this.date = date;
         this.shares = shares;
         this.costBasis = costBasis;
         this.costBasisDate = (costBasisDate == null) ? date : costBasisDate;
+        this.cashInBasis = cashInBasis;
     }
 
     /**
@@ -98,6 +104,14 @@ public class SecurityLot implements Comparable<SecurityLot> {
     }
     
     /**
+     * @return The cash-in basis. Only lots representing shares bought directly, as opposed to
+     * say due to reinvested dividends, have a non-zero cash-in basis.
+     */
+    public final BigDecimal getCashInBasis() {
+        return cashInBasis;
+    }
+    
+    /**
      * Retrieves a new security lot that has a number of shares removed from this lot,
      * with an appropriately adjusted cost basis.
      * @param date  The date to assign to the lot.
@@ -116,9 +130,16 @@ public class SecurityLot implements Comparable<SecurityLot> {
             throw new IllegalArgumentException("The shares requested is fewer than the shares available.");
         }
         
-        BigDecimal remainingCostBasis = this.costBasis.multiply(remainingShares).divide(this.shares, RoundingMode.HALF_UP);
+        BigDecimal remainingCostBasis = this.costBasis.multiply(remainingShares).divide(this.shares, this.costBasis.scale(), RoundingMode.HALF_UP);
+        BigDecimal remainingCashInBasis;
+        if (this.cashInBasis != null) {
+            remainingCashInBasis = this.cashInBasis.multiply(remainingShares).divide(this.shares, this.cashInBasis.scale(), RoundingMode.HALF_UP);
+        }
+        else {
+            remainingCashInBasis = null;
+        }
         return new SecurityLot(SecurityLot.makeLotId(), date, 
-            remainingShares, remainingCostBasis, this.costBasisDate);
+            remainingShares, remainingCostBasis, this.costBasisDate, remainingCashInBasis);
     }
     
     /**
@@ -133,8 +154,8 @@ public class SecurityLot implements Comparable<SecurityLot> {
             return this;
         }
         
-        BigDecimal newShares = this.shares.multiply(sharesOut).divide(sharesIn, RoundingMode.HALF_UP);
-        return new SecurityLot(SecurityLot.makeLotId(), date, newShares, this.costBasis, this.costBasisDate);
+        BigDecimal newShares = this.shares.multiply(sharesOut).divide(sharesIn, this.shares.scale(), RoundingMode.HALF_UP);
+        return new SecurityLot(SecurityLot.makeLotId(), date, newShares, this.costBasis, this.costBasisDate, this.cashInBasis);
     }
     
     

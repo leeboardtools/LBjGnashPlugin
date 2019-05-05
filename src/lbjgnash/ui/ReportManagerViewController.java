@@ -114,6 +114,10 @@ public class ReportManagerViewController implements Initializable {
         dialog.setCancelButtonId(PromptDialog.BTN_CANCEL);
         
         dialog.setButtonCloseCallback((chosenId) -> {
+            if (chosenId == PromptDialog.BTN_CANCEL) {
+                return true;
+            }
+            
             String reportName = dialog.getTextInputText(id).trim();
             
             if (!FileUtil.isAcceptableFileName(reportName)) {

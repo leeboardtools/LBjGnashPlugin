@@ -19,10 +19,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.List;
-import java.util.SortedSet;
-import java.util.TreeSet;
 
 /**
  *
@@ -41,9 +38,7 @@ public interface SecurityLotAction {
 
         @Override
         public SecurityLots applyAction(SecurityLots securityLots) {
-            SortedSet<SecurityLot> lots = new TreeSet<>(securityLots.getSecurityLots());
-            lots.add(newLot);
-            return new SecurityLots(lots);
+            return securityLots.addLot(newLot);
         }
     }
     
@@ -76,8 +71,32 @@ public interface SecurityLotAction {
             return securityLots.removeLIFOShares(date, sharesSold);
         }       
     }
-    
-    
+       
+    public static class SellWithinDateThenFIFOShares implements SecurityLotAction {
+        private final LocalDate date;
+        private final BigDecimal sharesSold;
+        private final int daysBefore;
+        
+        public SellWithinDateThenFIFOShares(LocalDate date, BigDecimal sharesSold, int daysBefore) {
+            this.date = date;
+            this.sharesSold = sharesSold;
+            this.daysBefore = daysBefore;
+        }
+
+        @Override
+        public SecurityLots applyAction(SecurityLots securityLots) {
+            LocalDate cutoffDate = date.minusDays(daysBefore);
+            BigDecimal shortTermShares = securityLots.getSharesAfterDate(cutoffDate);
+            if (shortTermShares.compareTo(sharesSold) >= 0) {
+                return securityLots.removeLIFOShares(date, sharesSold);
+            }
+
+            SecurityLots longTermLots = securityLots.removeLIFOShares(date, shortTermShares);
+            BigDecimal longTermSharesToSell = sharesSold.subtract(shortTermShares);
+            return longTermLots.removeFIFOShares(date, longTermSharesToSell);
+        }       
+    } 
+
     public static class SellSpecificLots implements SecurityLotAction {
         private final LocalDate date;
         private final List<SecurityLots.LotShares> lotShares = new ArrayList<>();

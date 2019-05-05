@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.logging.Logger;
 import jgnash.engine.Account;
@@ -43,21 +44,7 @@ public class SecurityTransactionTracker {
     
     private final SecurityNode securityNode;
     private final TreeSet<DateEntry> dateEntries = new TreeSet<>();
-    
-    private BigDecimal totalCashIn = BigDecimal.ZERO;
-    private BigDecimal totalCashOut = BigDecimal.ZERO;
-    
-    // The members of this are taken from dateEntries.
-    private class CashInEntry {
-        final BigDecimal cashIn;
-        final LocalDate date;
-        
-        CashInEntry(BigDecimal cashIn, LocalDate date) {
-            this.cashIn = cashIn;
-            this.date = date;
-        }
-    }
-    private final ArrayList<CashInEntry> totalCashInEntries = new ArrayList<>();
+    private final TreeMap<LocalDate, TransactionsForDate> dateTransactionsToProcess = new TreeMap<>();
 
 
     // We want to track cost-basis.
@@ -90,7 +77,15 @@ public class SecurityTransactionTracker {
     //  Remove LIFO shares.
     //  Split Lots.
     
-    
+    private static class CashInLotEntry {
+        private final SecurityLot originalLot;
+        private BigDecimal totalShares;
+        
+        CashInLotEntry(SecurityLot originalLot) {
+            this.originalLot = originalLot;
+            this.totalShares = originalLot.getShares();
+        }
+    }
     
     public class DateEntry implements Comparable<DateEntry> {
         private final LocalDate date;
@@ -205,37 +200,8 @@ public class SecurityTransactionTracker {
          * @return The sum of the year ago values.
          */
         public final BigDecimal getYearAgoValueSum(LocalDate date, int minDays) {
-            LocalDate cutoffDate = date.minusDays(minDays);
             BigDecimal currentPrice = getMarketPrice(date);
-            if (currentPrice.compareTo(BigDecimal.ZERO) == 0) {
-                return BigDecimal.ZERO;
-            }
-            
-            BigDecimal yearAgoValueSum = BigDecimal.ZERO;
-            
-            for (SecurityLot securityLot : securityLots.getSecurityLots()) {
-                if (!securityLot.getCostBasisDate().isBefore(cutoffDate)) {
-                    continue;
-                }
-                
-                BigDecimal costBasis = securityLot.getCostBasis();
-                if (costBasis.compareTo(BigDecimal.ZERO) <= 0) {
-                    continue;
-                }
-                
-                BigDecimal value = securityLot.getShares().multiply(currentPrice);
-                double doubleValue = value.doubleValue();
-                
-                // (Ending/Begining)^(1/time) - 1
-                double time = DateUtil.getYearsUntil(securityLot.getCostBasisDate(), date);
-                double rateOfReturn = Math.pow(doubleValue / costBasis.doubleValue(), 1./time) - 1.;
-                
-                double doubleYearAgoValue = doubleValue / (1. + rateOfReturn);
-                BigDecimal yearAgoValue = BigDecimal.valueOf(doubleYearAgoValue).setScale(costBasis.scale(), MathConstants.roundingMode);
-                yearAgoValueSum = yearAgoValueSum.add(yearAgoValue);
-            }
-            
-            return yearAgoValueSum;
+            return calcYearAgoValueSum(date, minDays, securityLots, currentPrice);
         }
 
 
@@ -243,59 +209,93 @@ public class SecurityTransactionTracker {
          * @return The total cash used to make direct purchases (excludes reinvested dividends)
          */
         public final BigDecimal getTotalCashIn() {
-            return totalCashIn;
+            return securityLots.getTotalCashIn();
         }
+
 
         /**
-         * @return The total of the cash value of all security sales.
+         * Similar in functionality to {@link getYearAgoValueSum(LocalDate date, int minDays)} except this uses the
+         * cash-in basis of security lots and allocates security lots without cash-in basis to all prior
+         * security lots.
+         * @param date  The date of interest.
+         * @param minDays   The minimum number of days before a rate of return is computed for a lot,
+         * that is, the lot's cost basis date must be at least this many days from date to be included.
+         * @return The sum of the year ago values.
          */
-        public final BigDecimal getTotalCashOut() {
-            return totalCashOut;
-        }
-
-
-        public BigDecimal calcCashInYearAgoValueSum(LocalDate date, int minDays, BigDecimal marketValue) {
-            if ((totalCashIn.compareTo(BigDecimal.ONE) <= 0) || totalCashInEntries.isEmpty()) {
-                return BigDecimal.ZERO;
+        public final BigDecimal getCashInYearAgoValueSum(LocalDate date, int minDays) {
+            boolean isDebug = false;
+            if (isDebug) {
+                System.out.println("\nCashInYearAgoValueSum:\t" + getSecurityNode().getSymbol());
             }
+            
+            // Build a new security lots whose security lots are the security lots with
+            // cash-in basis, and whose shares represent the original shares plus any
+            // shares from future lots without cash-in basis (i.e. reinvested dividends)
+            // proportionally allocated to existing shares at the time.
+            List<CashInLotEntry> cashInEntries = new ArrayList<>();
+            BigDecimal currentTotalShares = BigDecimal.ZERO;
+            for (SecurityLot securityLot : securityLots.getSecurityLots()) {
+                BigDecimal cashInBasis = securityLot.getCashInBasis();
+                if (cashInBasis.compareTo(BigDecimal.ZERO) <= 0) {                    
+                    if (isDebug) {
+                        System.out.println("Distributing:\t" + securityLot.getDate() + "\t" + securityLot.getShares() + "\t" + securityLot.getCostBasis());
+                    }
 
-            LocalDate cutoffDate = date.minusDays(minDays);
-            BigDecimal currentTotalValue = marketValue.add(totalCashOut);
-            if (currentTotalValue.compareTo(BigDecimal.ZERO) == 0) {
-                return BigDecimal.ZERO;
-            }
-
-            BigDecimal yearAgoValueSum = BigDecimal.ZERO;
-
-            for (CashInEntry cashInEntry : totalCashInEntries) {
-                BigDecimal cashIn = cashInEntry.cashIn;
-                if (cashIn.compareTo(BigDecimal.ZERO) <= 0) {
-                    continue;
-                }
-
-                BigDecimal yearAgoValue;
-                if (!cashInEntry.date.isBefore(cutoffDate)) {
-                    yearAgoValue = cashIn;
+                    // Need to allocate the shares to all previous cash-in securities based upon
+                    // the proportion of shares to the total shares.
+                    // We need to be exact, so the last lot allocated to must be a remainder operation.
+                    BigDecimal sharesRemaining = securityLot.getShares();
+                    int lotCount = cashInEntries.size();
+                    int end = lotCount - 1;
+                    for (int i = 0; i < end; ++i) {
+                        CashInLotEntry cashInEntry = cashInEntries.get(i);
+                        BigDecimal sharesToAllocate = sharesRemaining
+                                .multiply(cashInEntry.totalShares)
+                                .divide(currentTotalShares, currentTotalShares.scale(), MathConstants.roundingMode);
+                        cashInEntry.totalShares = cashInEntry.totalShares.add(sharesToAllocate);
+                        sharesRemaining = sharesRemaining.subtract(sharesToAllocate);
+                    }
+                    
+                    cashInEntries.get(end).totalShares = cashInEntries.get(end).totalShares.add(sharesRemaining);
                 }
                 else {
-                    BigDecimal value = currentTotalValue.multiply(cashIn).divide(totalCashIn, MathConstants.roundingMode);
-                    double doubleValue = value.doubleValue();
-
-                    // (Ending/Begining)^(1/time) - 1
-                    double time = DateUtil.getYearsUntil(cashInEntry.date, date);
-                    double ratio = Math.pow(doubleValue / cashIn.doubleValue(), 1./time);
-                    ratio = Math.max(ratio, 1e-5);
-
-                    double doubleYearAgoValue = doubleValue / ratio;
-                    yearAgoValue = BigDecimal.valueOf(doubleYearAgoValue).setScale(cashIn.scale(), MathConstants.roundingMode);
+                    // Just add to the list.
+                    cashInEntries.add(new CashInLotEntry(securityLot));
+                    
+                    if (isDebug) {
+                        System.out.println("Added:\t" + securityLot.getDate() + "\t" + securityLot.getShares() + "\t" + securityLot.getCostBasis());
+                    }
                 }
-
-                yearAgoValueSum = yearAgoValueSum.add(yearAgoValue);
-
+                
+                currentTotalShares = currentTotalShares.add(securityLot.getShares());
+            }
+    
+            if (isDebug) {
+                System.out.println("New Lots:");
+            }
+            
+            // Create the new security lots.
+            List<SecurityLot> newLots = new ArrayList<>();
+            for (CashInLotEntry cashInEntry : cashInEntries) {
+                SecurityLot oldLot = cashInEntry.originalLot;
+                SecurityLot newLot = new SecurityLot(oldLot.getLotId(), oldLot.getDate(), cashInEntry.totalShares,
+                    oldLot.getCostBasis(), oldLot.getCostBasisDate(), oldLot.getCashInBasis());
+                newLots.add(newLot);
+                
+                if (isDebug) {
+                    System.out.println("New Lot:\t" + newLot.getDate() + "\t" + newLot.getShares() + "\t" + newLot.getCostBasis());
+                }
+            }
+            
+            if (isDebug) {
+                System.out.println();
             }
 
-            return yearAgoValueSum;
+            SecurityLots newSecurityLots = new SecurityLots(newLots);            
+            BigDecimal currentPrice = getMarketPrice(date);
+            return calcYearAgoValueSum(date, minDays, newSecurityLots, currentPrice);
         }
+
         
         @Override
         public int compareTo(DateEntry o) {
@@ -326,15 +326,176 @@ public class SecurityTransactionTracker {
     
     public final void clearAll() {
         dateEntries.clear();
-        totalCashIn = BigDecimal.ZERO;
-        totalCashOut = BigDecimal.ZERO;
-        totalCashInEntries.clear();
     }
     
     
+    /**
+     * Calculates an estimate of the value at the beginning of an annual period of
+     * the security lots that's based upon the compound annual growth rate (CAGR) 
+     * from a given date.For each lot the CAGR is computed, then the value of the
+     * lot one year before the given date is computed based upon this value.The
+     * return value is the sum of these 'year ago' values.
+     * @param date  The date of interest.
+     * @param minDays   The minimum number of days before a rate of return is computed for a lot,
+     * that is, the lot's cost basis date must be at least this many days from date to be included.
+     * If the lot is too new, the lot's cost basis is used as-is (i.e. 0% return)
+     * @param securityLots  The security lots to use.
+     * @param currentPrice  The current price of the security.
+     * @return The sum of the year ago values.
+     */
+    public final BigDecimal calcYearAgoValueSum(LocalDate date, int minDays, SecurityLots securityLots, BigDecimal currentPrice) {
+        LocalDate cutoffDate = date.minusDays(minDays);
+        if (currentPrice.compareTo(BigDecimal.ZERO) == 0) {
+            return BigDecimal.ZERO;
+        }
+
+        BigDecimal yearAgoValueSum = BigDecimal.ZERO;
+
+        for (SecurityLot securityLot : securityLots.getSecurityLots()) {
+            BigDecimal costBasis = securityLot.getCostBasis();
+            if (costBasis.compareTo(BigDecimal.ZERO) <= 0) {
+                continue;
+            }
+
+            BigDecimal yearAgoValue;
+            if (securityLot.getCostBasisDate().isBefore(cutoffDate)) {
+                BigDecimal value = securityLot.getShares().multiply(currentPrice);
+                double doubleValue = value.doubleValue();
+                
+                // (Ending/Begining)^(1/time) - 1
+                double time = DateUtil.getYearsUntil(securityLot.getCostBasisDate(), date);
+                double rateOfReturn = Math.pow(doubleValue / costBasis.doubleValue(), 1./time) - 1.;
+
+                double doubleYearAgoValue = doubleValue / (1. + rateOfReturn);
+                yearAgoValue = BigDecimal.valueOf(doubleYearAgoValue).setScale(costBasis.scale(), MathConstants.roundingMode);
+            }
+            else {
+                yearAgoValue = costBasis;
+            }
+            
+            yearAgoValueSum = yearAgoValueSum.add(yearAgoValue);
+        }
+
+        return yearAgoValueSum;
+    }
     
+    // We want to sort transactions by date,
+    // and then for a given date process in the following priority:
+    //      - cash in
+    //      - sell security
+    //      - buy security
+    //      - cash out
+    static class CashTransactionToRecord {
+        final Account cashAccount;
+        final Transaction transaction;
+        final BigDecimal amount;
+        
+        CashTransactionToRecord(Account cashAccount, Transaction transaction, BigDecimal amount) {
+            this.cashAccount = cashAccount;
+            this.transaction = transaction;
+            this.amount = amount;
+        }
+    }
+    
+    static class TransactionsForDate {
+        final List<CashTransactionToRecord> cashInTransactions = new ArrayList();
+        final List<InvestmentTransaction> sellTransactions = new ArrayList<>();
+        final List<InvestmentTransaction> buyTransactions = new ArrayList<>();
+        final List<CashTransactionToRecord> cashOutTransactions = new ArrayList();
+    }
+    
+    TransactionsForDate accessTransactionsForDate(LocalDate date) {
+        TransactionsForDate transactions = dateTransactionsToProcess.get(date);
+        if (transactions == null) {
+            transactions = new TransactionsForDate();
+            dateTransactionsToProcess.put(date, transactions);
+        }
+        return transactions;
+    }
+    
+    public final void recordTransaction(InvestmentTransaction transaction) {
+        LocalDate date = transaction.getLocalDate();
+        
+        switch (transaction.getTransactionType()){
+            case ADDSHARE:
+                accessTransactionsForDate(date).buyTransactions.add(transaction);
+                break;
+                
+            case BUYSHARE:
+                accessTransactionsForDate(date).buyTransactions.add(transaction);
+                break;
+                
+            case DIVIDEND:
+                break;
+                
+            case REINVESTDIV:
+                accessTransactionsForDate(date).buyTransactions.add(transaction);
+                break;
+                
+            case REMOVESHARE:
+                break;
+                
+            case RETURNOFCAPITAL:
+                break;
+                
+            case SELLSHARE:
+                accessTransactionsForDate(date).sellTransactions.add(transaction);
+                break;
+                
+            case SPLITSHARE:
+                accessTransactionsForDate(date).sellTransactions.add(transaction);
+                break;
+                
+            case MERGESHARE:
+                accessTransactionsForDate(date).sellTransactions.add(transaction);
+                break;
+                
+            default:
+                throw new AssertionError(transaction.getTransactionType().name());
+            
+        }
+        
+    }
     
     public final void recordCashTransaction(Account cashAccount, Transaction transaction, BigDecimal amount) {
+        LocalDate date = transaction.getLocalDate();
+        if (amount.compareTo(BigDecimal.ZERO) < 0) {
+            // Cash out
+            accessTransactionsForDate(date).cashOutTransactions.add(new CashTransactionToRecord(cashAccount, transaction, amount));
+        }
+        else {
+            accessTransactionsForDate(date).cashInTransactions.add(new CashTransactionToRecord(cashAccount, transaction, amount));
+        }
+    }
+    
+    public final void finalizeTransactions() {
+        dateTransactionsToProcess.forEach((date, transactions) -> {
+            transactions.cashInTransactions.forEach((entry) -> {
+                recordCashTransactionImpl(entry.cashAccount, entry.transaction, entry.amount);
+            });
+            
+            transactions.sellTransactions.forEach((entry) -> {
+                recordTransactionImpl(entry);
+            });
+            
+            transactions.buyTransactions.forEach((entry) -> {
+                recordTransactionImpl(entry);
+            });
+
+            transactions.cashOutTransactions.forEach((entry) -> {
+                recordCashTransactionImpl(entry.cashAccount, entry.transaction, entry.amount);
+            });
+        });
+        
+        dateTransactionsToProcess.clear();
+    }
+    
+    public boolean isCashInString(String text) {
+        text = text.toLowerCase();
+        return text.contains("[cash-in]");
+    }
+    
+    public final void recordCashTransactionImpl(Account cashAccount, Transaction transaction, BigDecimal amount) {
         LocalDate date = transaction.getLocalDate();
 
         String lotId = SecurityLot.makeLotId();
@@ -357,16 +518,21 @@ public class SecurityTransactionTracker {
         if (amount.compareTo(BigDecimal.ZERO) > 0) {
             // Is it income, or cash inflow?
             // Cash inflow has cost basis, income does not.
-            boolean isIncome = false;
-            for (TransactionEntry entry : transaction.getTransactionEntries()) {
-                if (entry.getCreditAccount() != cashAccount) {
-                    continue;
-                }
-                
-                Account debitAccount = entry.getDebitAccount();
-                if (debitAccount.getAccountType().getAccountGroup() == AccountGroup.INCOME) {
-                    isIncome = true;
-                    break;
+            boolean isIncome = !isCashInString(transaction.getMemo());
+            
+            if (isIncome) {
+                isIncome = false;
+                for (TransactionEntry entry : transaction.getTransactionEntries()) {
+                    if (entry.getCreditAccount() != cashAccount) {
+                        continue;
+                    }
+
+                    Account debitAccount = entry.getDebitAccount();
+                    if ((debitAccount.getAccountType().getAccountGroup() == AccountGroup.INCOME)
+                      && !isCashInString(debitAccount.getDescription())) {
+                        isIncome = true;
+                        break;
+                    }
                 }
             }
             
@@ -374,50 +540,60 @@ public class SecurityTransactionTracker {
                 action = new SecurityLotAction.DistributeCash(date, amount);
             }
             else {
-                SecurityLot newLot = new SecurityLot(lotId, date, amount, amount, null);
+                SecurityLot newLot = new SecurityLot(lotId, date, amount, amount, null, amount);
                 action = new SecurityLotAction.AddLot(newLot);
-
-                totalCashIn = totalCashIn.add(amount);
-                totalCashInEntries.add(new CashInEntry(amount, transaction.getLocalDate()));
             }
         }
         else {
             BigDecimal sharesToRemove = amount.negate();
             BigDecimal currentShares = previousLots.getTotalShares();
             if (sharesToRemove.compareTo(currentShares) <= 0) {
-                action = new SecurityLotAction.SellFIFOShares(date, amount.negate());
+                action = new SecurityLotAction.SellWithinDateThenFIFOShares(date, amount.negate(), 90);
+                //action = new SecurityLotAction.SellFIFOShares(date, amount.negate());
             }
             else {
                 // Going negative, probably the result of a sell before a buy, but for now
                 // we'll just go negative shares.
                 BigDecimal negativeShares = currentShares.subtract(sharesToRemove);
                 previousLots = new SecurityLots();
-                SecurityLot newLot = new SecurityLot(lotId, date, negativeShares, negativeShares, null);
+                SecurityLot newLot = new SecurityLot(lotId, date, negativeShares, negativeShares, null, BigDecimal.ZERO);
                 action = new SecurityLotAction.AddLot(newLot);
-            }
-            
-            totalCashOut = totalCashOut.subtract(amount);
-            if (totalCashOut.compareTo(BigDecimal.ZERO) < 0) {
-                totalCashOut = BigDecimal.ZERO;
             }
         }
 
         SecurityLots newLots = action.applyAction(previousLots);
         BigDecimal marketPrice = BigDecimal.ONE;
+
+        
+        // TEST!!!
+        boolean isDebug = false;
+        //isDebug = true;
+        if (isDebug) {
+            System.out.println("\n" + date + "\t" + transaction.getTransactionMemo() + "\t" + amount);
+            System.out.println("Old Lots:\t" + "\t" + previousLots.getTotalShares() + "\t" + previousLots.getTotalCostBasis() + "\t" + previousLots.getTotalCashIn());
+            for (SecurityLot lot : previousLots.getSecurityLots()) {
+                System.out.println("\t" + lot.getCostBasisDate() + "\t" + lot.getShares() + "\t" + lot.getCostBasis() + "\t" + lot.getCashInBasis());
+            }
+            System.out.println("New Lots:\t" + "\t" + newLots.getTotalShares() + "\t" + newLots.getTotalCostBasis() + "\t" + newLots.getTotalCashIn());
+            for (SecurityLot lot : newLots.getSecurityLots()) {
+                System.out.println("\t" + lot.getCostBasisDate() + "\t" + lot.getShares() + "\t" + lot.getCostBasis() + "\t" + lot.getCashInBasis());
+            }
+            System.out.println();
+        }
+        
         
         DateEntry dateEntry = new DateEntry(date, marketPrice, action, otherActions, newLots);
         if (otherActions != null) {
             dateEntries.remove(previousDateEntry);
         }
         dateEntries.add(dateEntry);
-        
     }
     
     protected void dumpTransaction(String title, LocalDate date, BigDecimal quantity, BigDecimal cashValue) {
         System.out.println(title + "\t" + date + "\t" + quantity + "\t" + cashValue);
     }
     
-    public final void recordTransaction(InvestmentTransaction transaction) {
+    public final void recordTransactionImpl(InvestmentTransaction transaction) {
         LocalDate date = transaction.getLocalDate();
         BigDecimal quantity = transaction.getQuantity();
         BigDecimal cashValue = getTransactionCashValue(transaction);
@@ -429,25 +605,22 @@ public class SecurityTransactionTracker {
         SecurityLot newLot;
         switch (transaction.getTransactionType()){
             case ADDSHARE:
-                newLot = newLotForTransaction(transaction);
+                newLot = newLotForTransaction(transaction, true);
                 action = new SecurityLotAction.AddLot(newLot);
                 break;
                 
             case BUYSHARE:
-                newLot = newLotForTransaction(transaction);
-                action = new SecurityLotAction.AddLot(newLot);
                 String memo = transaction.getMemo().toLowerCase();
-                if (!memo.contains("reinvested") && (cashValue.compareTo(BigDecimal.ZERO) > 0)) {
-                    totalCashIn = totalCashIn.add(cashValue);
-                    totalCashInEntries.add(new CashInEntry(cashValue, transaction.getLocalDate()));
-                }
+                boolean isCashIn = !memo.contains("reinvested") && (cashValue.compareTo(BigDecimal.ZERO) > 0);
+                newLot = newLotForTransaction(transaction, isCashIn);
+                action = new SecurityLotAction.AddLot(newLot);
                 break;
                 
             case DIVIDEND:
                 break;
                 
             case REINVESTDIV:
-                newLot = newLotForTransaction(transaction);
+                newLot = newLotForTransaction(transaction, false);
                 action = new SecurityLotAction.AddLot(newLot);
                 break;
                 
@@ -455,7 +628,6 @@ public class SecurityTransactionTracker {
                 break;
                 
             case RETURNOFCAPITAL:
-                totalCashOut = totalCashOut.add(cashValue);
                 break;
                 
             case SELLSHARE:
@@ -466,7 +638,6 @@ public class SecurityTransactionTracker {
                 else {
                     action = new SecurityLotAction.SellSpecificLots(date, lotShares);
                 }
-                totalCashOut = totalCashOut.add(cashValue);
                 break;
                 
             case SPLITSHARE:
@@ -480,14 +651,6 @@ public class SecurityTransactionTracker {
             default:
                 throw new AssertionError(transaction.getTransactionType().name());
             
-        }
-        
-        BigDecimal accountBalance = transaction.getInvestmentAccount().getBalance();
-        if (accountBalance.equals(BigDecimal.ZERO)) {
-            // We'll presume that once everything's sold we reset tracking.
-            totalCashIn = BigDecimal.ZERO;
-            totalCashOut = BigDecimal.ZERO;
-            totalCashInEntries.clear();
         }
         
         if (action == null) {
@@ -538,7 +701,7 @@ public class SecurityTransactionTracker {
     }
 
     
-    protected SecurityLot newLotForTransaction(InvestmentTransaction transaction) {
+    protected SecurityLot newLotForTransaction(InvestmentTransaction transaction, boolean isCashIn) {
         String lotId = null;
         Collection<String> lotNames = lotNamesFromString(transaction.getMemo());
         if ((lotNames != null) && !lotNames.isEmpty()) {
@@ -554,8 +717,8 @@ public class SecurityTransactionTracker {
         LocalDate date = transaction.getLocalDate();
         BigDecimal shares = transaction.getQuantity();
         BigDecimal costBasis = getTransactionCashValue(transaction);
-        
-        return new SecurityLot(lotId, date, shares, costBasis, null);
+        BigDecimal cashInBasis = (isCashIn) ? costBasis : BigDecimal.ZERO;
+        return new SecurityLot(lotId, date, shares, costBasis, null, cashInBasis);
     }
     
     protected BigDecimal getTransactionCashValue(InvestmentTransaction transaction) {

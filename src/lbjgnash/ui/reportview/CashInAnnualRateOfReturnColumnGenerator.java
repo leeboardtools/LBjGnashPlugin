@@ -33,21 +33,21 @@ public class CashInAnnualRateOfReturnColumnGenerator extends SecuritiesColumnGen
     protected String getSecurityEntryCellValue(DatedSecurityEntryInfo securityEntryInfo, DateEntryInfo dateEntryInfo, ReportDataView.ReportOutput reportOutput) {
         BigDecimal yearAgoValueSum = securityEntryInfo.getCashInYearAgoValueSum(
                 dateEntryInfo.dateEntry.endDate, reportOutput.getMinDaysForRateOfReturn());
-        BigDecimal totalValue =  securityEntryInfo.getTotalValue(dateEntryInfo.dateEntry.endDate);
+        BigDecimal totalValue = securityEntryInfo.trackerDateEntry.getMarketValue(dateEntryInfo.dateEntry.endDate);
         BigDecimal numerator = totalValue.subtract(yearAgoValueSum);
         return reportOutput.toPercentString(numerator, yearAgoValueSum);
     }
 
     @Override
     protected String getSummaryEntryCellValue(DatedSummaryEntryInfo datedAccountEntryInfo, DateEntryInfo dateEntryInfo, ReportDataView.ReportOutput reportOutput) {
-        BigDecimal totalValue = datedAccountEntryInfo.totalMarketValue.add(datedAccountEntryInfo.totalCashOut);
+        BigDecimal totalValue = datedAccountEntryInfo.totalMarketValue;
         BigDecimal numerator = totalValue.subtract(datedAccountEntryInfo.cashInYearAgoValueSum);
         return reportOutput.toPercentString(numerator, datedAccountEntryInfo.cashInYearAgoValueSum);
     }
     
     @Override
     protected String getGrandTotalCellValue(DateEntryInfo dateEntryInfo, ReportDataView.ReportOutput reportOutput) {
-        BigDecimal totalValue = dateEntryInfo.totalMarketValue.add(dateEntryInfo.totalCashOut);
+        BigDecimal totalValue = dateEntryInfo.totalMarketValue;
         BigDecimal numerator = totalValue.subtract(dateEntryInfo.cashInYearAgoValueSum);
         return reportOutput.toPercentString(numerator, dateEntryInfo.cashInYearAgoValueSum);
     }
