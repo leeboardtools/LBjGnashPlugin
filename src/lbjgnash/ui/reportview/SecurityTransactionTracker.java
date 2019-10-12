@@ -246,17 +246,19 @@ public class SecurityTransactionTracker {
                     // We need to be exact, so the last lot allocated to must be a remainder operation.
                     BigDecimal sharesRemaining = securityLot.getShares();
                     int lotCount = cashInEntries.size();
-                    int end = lotCount - 1;
-                    for (int i = 0; i < end; ++i) {
-                        CashInLotEntry cashInEntry = cashInEntries.get(i);
-                        BigDecimal sharesToAllocate = sharesRemaining
-                                .multiply(cashInEntry.totalShares)
-                                .divide(currentTotalShares, currentTotalShares.scale(), MathConstants.roundingMode);
-                        cashInEntry.totalShares = cashInEntry.totalShares.add(sharesToAllocate);
-                        sharesRemaining = sharesRemaining.subtract(sharesToAllocate);
+                    if (lotCount > 0) {
+                        int end = lotCount - 1;
+                        for (int i = 0; i < end; ++i) {
+                            CashInLotEntry cashInEntry = cashInEntries.get(i);
+                            BigDecimal sharesToAllocate = sharesRemaining
+                                    .multiply(cashInEntry.totalShares)
+                                    .divide(currentTotalShares, currentTotalShares.scale(), MathConstants.roundingMode);
+                            cashInEntry.totalShares = cashInEntry.totalShares.add(sharesToAllocate);
+                            sharesRemaining = sharesRemaining.subtract(sharesToAllocate);
+                        }
+
+                        cashInEntries.get(end).totalShares = cashInEntries.get(end).totalShares.add(sharesRemaining);
                     }
-                    
-                    cashInEntries.get(end).totalShares = cashInEntries.get(end).totalShares.add(sharesRemaining);
                 }
                 else {
                     // Just add to the list.
