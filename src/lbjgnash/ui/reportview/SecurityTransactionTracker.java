@@ -368,8 +368,13 @@ public class SecurityTransactionTracker {
                 double time = DateUtil.getYearsUntil(securityLot.getCostBasisDate(), date);
                 double rateOfReturn = Math.pow(doubleValue / costBasis.doubleValue(), 1./time) - 1.;
 
-                double doubleYearAgoValue = doubleValue / (1. + rateOfReturn);
-                yearAgoValue = BigDecimal.valueOf(doubleYearAgoValue).setScale(costBasis.scale(), MathConstants.roundingMode);
+                if (rateOfReturn == -1.) {
+                    yearAgoValue = costBasis;
+                }
+                else {
+                    double doubleYearAgoValue = doubleValue / (1. + rateOfReturn);
+                    yearAgoValue = BigDecimal.valueOf(doubleYearAgoValue).setScale(costBasis.scale(), MathConstants.roundingMode);
+                }
             }
             else {
                 yearAgoValue = costBasis;
