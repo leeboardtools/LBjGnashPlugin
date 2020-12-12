@@ -732,13 +732,39 @@ public class SecurityTransactionTracker {
         BigDecimal cashValue = transaction.getNetCashValue().setScale(securityNode.getScale(), MathConstants.roundingMode);
         return cashValue;
     }
+    
+    
+    protected Collection<SecurityLots.LotShares> getQuickTradeMatchingLotSharesFromTransaction(InvestmentTransaction transaction) {
+        DateEntry dateEntry = getDateEntry(transaction.getLocalDate());
+        if (dateEntry == null) {
+            return null;
+        }
+        
+        LocalDate cutoffDate = transaction.getLocalDate().minusDays(365);
+
+        BigDecimal transactionShares = transaction.getQuantity();
+        
+        SecurityLots securityLots = dateEntry.getSecurityLots();
+        for (SecurityLot securityLot : securityLots.getSecurityLots()) {
+            if (securityLot.getDate().isBefore(cutoffDate)) {
+                continue;
+            }
+            if (securityLot.getShares().equals(transactionShares)) {
+                Collection<SecurityLots.LotShares> lotShares = new ArrayList<>();
+                SecurityLots.LotShares lotSharesToAdd = new SecurityLots.LotShares(securityLot, securityLot.getShares());
+                lotShares.add(lotSharesToAdd);
+                return lotShares;
+            }
+        }
+        return null;
+    }
 
     
     protected Collection<SecurityLots.LotShares> getLotSharesFromTransaction(InvestmentTransaction transaction) {
         String memo = transaction.getMemo();
         Collection<String> lotNames = lotNamesFromString(memo);
         if ((lotNames == null) || (lotNames.isEmpty())) {
-            return null;
+            return getQuickTradeMatchingLotSharesFromTransaction(transaction);
         }
         
         DateEntry dateEntry = getDateEntry(transaction.getLocalDate());
